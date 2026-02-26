@@ -1,13 +1,13 @@
-// System clock constraint
+# System clock constraint
 set_property PACKAGE_PIN W5 [get_ports clk]
 	set_property IOSTANDARD LVCMOS33 [get_ports clk]
 	create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]
 
-// USB-RS232 rx constraint
+# USB-RS232 rx constraint
 set_property PACKAGE_PIN B18 [get_ports RsRx]
 	set_property IOSTANDARD LVCMOS33 [get_ports RsRx]
 
-// LEDs constraint
+# LEDs constraint
 set_property PACKAGE_PIN U16 [get_ports {led[0]}]
 	set_property IOSTANDARD LVCMOS33 [get_ports {led[0]}]
 set_property PACKAGE_PIN E19 [get_ports {led[1]}]
