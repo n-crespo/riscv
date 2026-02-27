@@ -194,9 +194,10 @@ class Assembler:
         with open(output_path, "w") as outfile:
             for instruction in machine_code:
                 outfile.write(instruction + "\n")
+            print(f"Successfully wrote compiled binary to: {output_path}")
 
 
 if __name__ == "__main__":
     assembler = Assembler()
-    assembler.assemble("./examples/1_simple.s", "1_simple.bin")
-    # assembler.assemble("./examples/2_loop.s", "2_loop.bin")
+    assembler.assemble("examples/1_simple.s", "examples/1_simple.bin")
+    assembler.assemble("examples/2_loop.s", "examples/2_loop.bin")
