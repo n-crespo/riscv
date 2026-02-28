@@ -38,6 +38,7 @@ module top (
   end
 
   // display the lower half of the instruction (bits 15 to 0)
+  // (assign is a physical solder joint)
   assign led = instruction_reg[15:0];
 
 endmodule
