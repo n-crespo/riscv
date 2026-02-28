@@ -1,13 +1,15 @@
 module top (
-    input clk,
-    input RsRx,
+    input clk,  // clock
+    input RsRx,  // the serial data
     output [15:0] led  // displaying 16 bits of the 32-bit instruction
 );
 
-  wire rx_dv;
-  wire [7:0] rx_byte;
+  wire rx_dv;  // data valid?
+  wire [7:0] rx_byte;  // will carry bytes of the serial data
 
+  //  a register holding the 32 instruction bits, currently set to all zeros in hex
   reg [31:0] instruction_reg = 32'h0;
+  // a register containing 2 bits, initialized to 00 in binary
   reg [1:0] byte_count = 2'b00;
 
   uart_rx #(
