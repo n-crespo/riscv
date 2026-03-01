@@ -1,12 +1,10 @@
 # Plan (nicolas)
 
-- control unit
-  - branching should work
+- data memory module (ram)
+- control unit branching (so loops work)
 
-- LATER: debug environment
+- LATER: debug environment?
   - map program counter to LEDs
-  - switch/button debouncing
-  - debug mode when END signal is received
 
 ## Fused-MAC Extension
 
