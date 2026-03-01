@@ -82,18 +82,21 @@ module top (
   // control unit wires
   wire        reg_we;
   wire [ 3:0] alu_ctrl;
+  wire        alu_src;
 
   control_unit ctrl (
       .opcode  (opcode),
       .funct3  (funct3),
       .funct7  (funct7),
       .reg_we  (reg_we),
-      .alu_ctrl(alu_ctrl)
+      .alu_ctrl(alu_ctrl),
+      .alu_src (alu_src)
   );
 
-  // alu wires
+  // alu and mux wires
   wire [31:0] alu_result;
   wire        alu_zero;
+  wire [31:0] alu_b_in;
 
   // link the alu output to the register write data
   wire [31:0] reg_wd = alu_result;
@@ -110,10 +113,18 @@ module top (
       .rd2(reg_rd2)
   );
 
+  // mux to select between register 2 and immediate value
+  mux2 alu_mux (
+      .d0 (reg_rd2),
+      .d1 (imm_val),
+      .sel(alu_src),
+      .out(alu_b_in)
+  );
+
   // alu instance
   alu main_alu (
       .a       (reg_rd1),
-      .b       (reg_rd2),     // this will eventually need a multiplexer for immediate values
+      .b       (alu_b_in),    // now driven by the mux
       .alu_ctrl(alu_ctrl),
       .out     (alu_result),
       .zero    (alu_zero)
