@@ -1,5 +1,6 @@
 *.bin
-*/*.bin
+*.elf
+*.o
 /assembler/__pycache__
 
 
