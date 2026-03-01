@@ -12,7 +12,7 @@ module instr_mem (
 );
 
   // 256 slots, each 32 bits wide
-  reg [31:0] ram[256];
+  reg [31:0] ram[0:255];
 
   // Write Logic (Port A)
   always @(posedge clk) begin

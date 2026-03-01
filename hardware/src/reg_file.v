@@ -11,7 +11,7 @@ module reg_file (
 );
 
   // 32 registers, each 32 bits wide
-  reg [31:0] registers[32];
+  reg [31:0] registers[0:31];
 
   // read asynchronously. register 0 is hardwired to zero
   assign rd1 = (rs1 == 5'b0) ? 32'b0 : registers[rs1];
