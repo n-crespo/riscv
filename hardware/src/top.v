@@ -1,5 +1,6 @@
 module top (
     input clk,  // clock
+    input reset,  // system reset
     input RsRx,  // the serial data
     output [15:0] led  // displaying 16 bits of the 32-bit instruction
 );
@@ -17,6 +18,10 @@ module top (
   // wire to trigger the memory save (write enable)
   wire mem_we;
 
+  // wires for the program counter and fetched instruction
+  wire [7:0] pc_wire;
+  wire [31:0] fetched_instruction;
+
   uart_rx #(
       .CLKS_PER_BIT(10416)
   ) uart_receiver (
@@ -26,14 +31,21 @@ module top (
       .rx_byte(rx_byte)
   );
 
+  // program counter instance
+  pc program_counter (
+      .clk(clk),
+      .reset(reset),
+      .pc_out(pc_wire)
+  );
+
   // filing cabinet to store instructions
   instr_mem instruction_memory (
       .clk   (clk),
       .we    (mem_we),
       .addr_a(write_addr),
       .din_a (instruction_reg),
-      .addr_b(8'h0),             // currently unused
-      .dout_b()                  // currently unused
+      .addr_b(pc_wire),             // driven by the program counter
+      .dout_b(fetched_instruction)  // outputs the current instruction
   );
 
   always @(posedge clk) begin
