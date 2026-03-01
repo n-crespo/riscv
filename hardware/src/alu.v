@@ -16,11 +16,13 @@ module alu (
       4'b0000: out = a + b;  // add
       4'b0001: out = a - b;  // subtract
       4'b0010: out = a << b[4:0];  // shift left logical
-      4'b0011: out = (a < b) ? 1 : 0;  // set less than
+      4'b0011: out = ($signed(a) < $signed(b)) ? 32'b1 : 32'b0;  // set less than (signed)
       4'b0100: out = a ^ b;  // xor
       4'b0101: out = a >> b[4:0];  // shift right logical
       4'b0110: out = a | b;  // or
       4'b0111: out = a & b;  // and
+      4'b1000: out = $signed(a) >>> b[4:0];  // shift right arithmetic
+      4'b1001: out = (a < b) ? 32'b1 : 32'b0;  // set less than unsigned
       default: out = 32'b0;  // default case
     endcase
   end
