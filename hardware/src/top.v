@@ -67,6 +67,24 @@ module top (
       .funct7(funct7)
   );
 
+  // register file wires
+  wire [31:0] reg_rd1;
+  wire [31:0] reg_rd2;
+  wire        reg_we = 1'b0;  // placeholder until control unit is built
+  wire [31:0] reg_wd = 32'b0;  // placeholder until alu is built
+
+  // register file instance
+  reg_file registers (
+      .clk(clk),
+      .we (reg_we),
+      .rs1(rs1),
+      .rs2(rs2),
+      .rd (rd),
+      .wd (reg_wd),
+      .rd1(reg_rd1),
+      .rd2(reg_rd2)
+  );
+
   always @(posedge clk) begin
     if (rx_dv) begin
       // shift in bytes: standard RISC-V is little-endian
