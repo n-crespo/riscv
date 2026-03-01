@@ -70,8 +70,25 @@ module top (
   // register file wires
   wire [31:0] reg_rd1;
   wire [31:0] reg_rd2;
-  wire        reg_we = 1'b0;  // placeholder until control unit is built
-  wire [31:0] reg_wd = 32'b0;  // placeholder until alu is built
+
+  // control unit wires
+  wire        reg_we;
+  wire [ 3:0] alu_ctrl;
+
+  control_unit ctrl (
+      .opcode  (opcode),
+      .funct3  (funct3),
+      .funct7  (funct7),
+      .reg_we  (reg_we),
+      .alu_ctrl(alu_ctrl)
+  );
+
+  // alu wires
+  wire [31:0] alu_result;
+  wire        alu_zero;
+
+  // link the alu output to the register write data
+  wire [31:0] reg_wd = alu_result;
 
   // register file instance
   reg_file registers (
@@ -83,6 +100,15 @@ module top (
       .wd (reg_wd),
       .rd1(reg_rd1),
       .rd2(reg_rd2)
+  );
+
+  // alu instance
+  alu main_alu (
+      .a       (reg_rd1),
+      .b       (reg_rd2),     // this will eventually need a multiplexer for immediate values
+      .alu_ctrl(alu_ctrl),
+      .out     (alu_result),
+      .zero    (alu_zero)
   );
 
   always @(posedge clk) begin
