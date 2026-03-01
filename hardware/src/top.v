@@ -7,10 +7,15 @@ module top (
   wire rx_dv;  // data valid?
   wire [7:0] rx_byte;  // will carry bytes of the serial data
 
-  //  a register holding the 32 instruction bits, currently set to all zeros in hex
+  // a register holding the 32 instruction bits, currently set to all zeros in hex
   reg [31:0] instruction_reg = 32'h0;
   // a register containing 2 bits, initialized to 00 in binary
   reg [1:0] byte_count = 2'b00;
+  // a register containing 8 bits to track memory location
+  reg [7:0] write_addr = 8'h0;
+
+  // wire to trigger the memory save (write enable)
+  wire mem_we;
 
   uart_rx #(
       .CLKS_PER_BIT(10416)
@@ -21,24 +26,43 @@ module top (
       .rx_byte(rx_byte)
   );
 
+  // filing cabinet to store instructions
+  instr_mem instruction_memory (
+      .clk   (clk),
+      .we    (mem_we),
+      .addr_a(write_addr),
+      .din_a (instruction_reg),
+      .addr_b(8'h0),             // currently unused
+      .dout_b()                  // currently unused
+  );
+
   always @(posedge clk) begin
     if (rx_dv) begin
       // shift in bytes: standard RISC-V is little-endian
       // byte 0 goes to [7:0], byte 1 to [15:8], etc.
       case (byte_count)
-        2'b00: instruction_reg[7:0] <= rx_byte;
-        2'b01: instruction_reg[15:8] <= rx_byte;
-        2'b10: instruction_reg[23:16] <= rx_byte;
-        2'b11: instruction_reg[31:24] <= rx_byte;
+        2'b00:   instruction_reg[7:0] <= rx_byte;
+        2'b01:   instruction_reg[15:8] <= rx_byte;
+        2'b10:   instruction_reg[23:16] <= rx_byte;
+        2'b11:   instruction_reg[31:24] <= rx_byte;
+        default: instruction_reg <= instruction_reg;  // do nothing
       endcase
 
       // increment counter; it will wrap around back to 00 after 4 bytes
       byte_count <= byte_count + 1'b1;
+
+      // move to next address only after the 4th byte is processed
+      if (byte_count == 2'b11) begin
+        write_addr <= write_addr + 1'b1;
+      end
     end
   end
 
-  // display the lower half of the instruction (bits 15 to 0)
-  // (assign is a physical solder joint)
-  assign led = instruction_reg[15:0];
+  // only trigger memory save when the 4th byte is valid
+  assign mem_we = (rx_dv && byte_count == 2'b11);
+
+  // display lower bits of instruction on right LEDs and address on left LEDs
+  assign led[7:0] = instruction_reg[7:0];
+  assign led[15:8] = write_addr;
 
 endmodule
