@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // dual port memory module
 module instr_mem (
     input        clk,

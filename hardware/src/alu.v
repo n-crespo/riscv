@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // Arithmetic logic unit for standard RISC-V operations
 module alu (
     input      [31:0] a,         // first operand

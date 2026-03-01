@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // Multiplexes two 32-bit inputs into one output based on a selector signal
 module mux2 (
     input [31:0] d0,

@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // Represents the 32 general-purpose registers in a RISC-V CPU
 module reg_file (
     input         clk,

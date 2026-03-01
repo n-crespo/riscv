@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // Decodes 32-bit RISC-V instructions into standard fields
 module decoder (
     input  [31:0] instr,

@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // Receives 8-bit serial data over a UART connection.
 module uart_rx #(
     // assuming 100MHz Basys3 clock and 9600 baud rate (100,000,000 / 9600 = 10416)

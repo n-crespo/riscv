@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 // the program counter that tracks the current instruction address
 module pc (
     input clk,
