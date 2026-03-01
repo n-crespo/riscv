@@ -2,10 +2,9 @@ import serial
 import time
 
 # configuration
-PORT = "COM6"
+PORT = "/dev/ttyUSB1"  # This replaces COM6
 BAUD = 9600
-# point this to your WSL binary (adjust yourname)
-FILE_PATH = r"\\wsl$\Ubuntu\home\yourname\riscv\examples\program.bin"
+FILE_PATH = "program.bin"
 
 
 def upload():
