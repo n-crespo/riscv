@@ -6,15 +6,19 @@ module control_unit (
     input [6:0] funct7,
     output reg reg_we,
     output reg [3:0] alu_ctrl,
-    output reg alu_src
+    output reg alu_src,
+    output reg mem_we,     // data memory write enable
+    output reg result_src  // 0 for alu result, 1 for memory read data
 );
 
   // determine control signals based on opcode
   always @(*) begin
     // default values to prevent latches
-    reg_we   = 1'b0;
-    alu_ctrl = 4'b0000;
-    alu_src  = 1'b0;
+    reg_we     = 1'b0;
+    alu_ctrl   = 4'b0000;
+    alu_src    = 1'b0;
+    mem_we     = 1'b0;
+    result_src = 1'b0;
 
     case (opcode)
       // r-type instructions (add, sub, and, or, etc)
@@ -71,10 +75,30 @@ module control_unit (
         endcase
       end
 
+      // load instructions (lw)
+      7'b0000011: begin
+        reg_we     = 1'b1;  // saving data from memory into a register
+        alu_src    = 1'b1;  // add the immediate offset to the base address
+        alu_ctrl   = 4'b0000;  // standard addition
+        mem_we     = 1'b0;  // reading from memory, not writing
+        result_src = 1'b1;  // route memory data to register file instead of alu result
+      end
+
+      // store instructions (sw)
+      7'b0100011: begin
+        reg_we     = 1'b0;  // not saving to a register
+        alu_src    = 1'b1;  // add the immediate offset to the base address
+        alu_ctrl   = 4'b0000;  // standard addition
+        mem_we     = 1'b1;  // write to memory!
+        result_src = 1'b0;  // doesn't matter, reg_we is 0
+      end
+
       default: begin
-        reg_we   = 1'b0;
-        alu_ctrl = 4'b0000;
-        alu_src  = 1'b0;
+        reg_we     = 1'b0;
+        alu_ctrl   = 4'b0000;
+        alu_src    = 1'b0;
+        mem_we     = 1'b0;
+        result_src = 1'b0;
       end
     endcase
   end
