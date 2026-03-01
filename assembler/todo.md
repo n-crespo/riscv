@@ -4,6 +4,11 @@ TODOs:
   - byte stitching state machine
   - store 32-bit instructions in FPGA's block RAM
 
+- control unit
+  - program counter
+  - branching should work
+  - handle invalid state?
+
 - LATER: debug environment
   - map program counter to LEDs
   - switch/button debouncing
