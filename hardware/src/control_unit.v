@@ -29,12 +29,19 @@ module control_unit (
               alu_ctrl = 4'b0000;  // add
             end
           end
-          3'b111:  alu_ctrl = 4'b0111;  // and
-          3'b110:  alu_ctrl = 4'b0110;  // or
-          3'b100:  alu_ctrl = 4'b0100;  // xor
           3'b001:  alu_ctrl = 4'b0010;  // sll
-          3'b101:  alu_ctrl = 4'b0101;  // srl
           3'b010:  alu_ctrl = 4'b0011;  // slt
+          3'b011:  alu_ctrl = 4'b1001;  // sltu
+          3'b100:  alu_ctrl = 4'b0100;  // xor
+          3'b101: begin
+            if (funct7 == 7'b0100000) begin
+              alu_ctrl = 4'b1000;  // sra
+            end else begin
+              alu_ctrl = 4'b0101;  // srl
+            end
+          end
+          3'b110:  alu_ctrl = 4'b0110;  // or
+          3'b111:  alu_ctrl = 4'b0111;  // and
           default: alu_ctrl = 4'b0000;
         endcase
       end
@@ -42,16 +49,23 @@ module control_unit (
       // i-type instructions (addi, slli, ori, etc)
       7'b0010011: begin
         reg_we  = 1'b1;  // we want to save the math result
-        alu_src = 1'b1;  // use immediate value
+        alu_src = 1'b1;  // route imm_val into the alu's second input
 
         case (funct3)
           3'b000:  alu_ctrl = 4'b0000;  // addi
-          3'b111:  alu_ctrl = 4'b0111;  // andi
-          3'b110:  alu_ctrl = 4'b0110;  // ori
-          3'b100:  alu_ctrl = 4'b0100;  // xori
           3'b001:  alu_ctrl = 4'b0010;  // slli
-          3'b101:  alu_ctrl = 4'b0101;  // srli (ignoring srai for now)
           3'b010:  alu_ctrl = 4'b0011;  // slti
+          3'b011:  alu_ctrl = 4'b1001;  // sltiu
+          3'b100:  alu_ctrl = 4'b0100;  // xori
+          3'b101: begin
+            if (funct7 == 7'b0100000) begin
+              alu_ctrl = 4'b1000;  // srai
+            end else begin
+              alu_ctrl = 4'b0101;  // srli
+            end
+          end
+          3'b110:  alu_ctrl = 4'b0110;  // ori
+          3'b111:  alu_ctrl = 4'b0111;  // andi
           default: alu_ctrl = 4'b0000;
         endcase
       end
