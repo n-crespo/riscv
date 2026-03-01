@@ -48,6 +48,25 @@ module top (
       .dout_b(fetched_instruction)  // outputs the current instruction
   );
 
+  // decoded instruction fields
+  wire [6:0] opcode;
+  wire [4:0] rd;
+  wire [2:0] funct3;
+  wire [4:0] rs1;
+  wire [4:0] rs2;
+  wire [6:0] funct7;
+
+  // instruction decoder instance
+  decoder instr_decoder (
+      .instr(fetched_instruction),
+      .opcode(opcode),
+      .rd(rd),
+      .funct3(funct3),
+      .rs1(rs1),
+      .rs2(rs2),
+      .funct7(funct7)
+  );
+
   always @(posedge clk) begin
     if (rx_dv) begin
       // shift in bytes: standard RISC-V is little-endian
