@@ -82,7 +82,7 @@ module top (
   // control unit wires
   wire        reg_we;
   wire [ 3:0] alu_ctrl;
-  wire        alu_src;
+  wire        alu_src;  // when 0, use source register, when 1 use immediate value
 
   control_unit ctrl (
       .opcode  (opcode),

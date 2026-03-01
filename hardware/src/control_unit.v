@@ -19,7 +19,7 @@ module control_unit (
       // r-type instructions (add, sub, and, or, etc)
       7'b0110011: begin
         reg_we  = 1'b1;  // we want to save the math result
-        alu_src = 1'b0;  // use register 2
+        alu_src = 1'b0;  // route rs2 into the alu's second input
 
         case (funct3)
           3'b000: begin
