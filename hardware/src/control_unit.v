@@ -36,7 +36,7 @@ module control_unit (
         endcase
       end
 
-      // you will add more opcodes here later (i-type, loads, branches)
+      // will add more opcodes here later (i-type, loads, branches)
       default: begin
         reg_we   = 1'b0;
         alu_ctrl = 4'b0000;

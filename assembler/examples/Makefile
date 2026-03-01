@@ -33,7 +33,7 @@ $(ELF): $(OBJS)
 $(BIN): $(ELF)
 	$(OBJCOPY) -O binary $(ELF) $(BIN)
 
-# Optional: Display the hex to compare with your custom assembler
+# Optional: Display the hex to compare with custom assembler
 dump: $(ELF)
 	@echo "--- Disassembly and Hex View ---"
 	$(OBJDUMP) -d $(ELF)

@@ -67,6 +67,14 @@ module top (
       .funct7(funct7)
   );
 
+  wire [31:0] imm_val;
+
+  // immediate generator instance
+  imm_gen immediate_generator (
+      .instr  (fetched_instruction),
+      .imm_out(imm_val)
+  );
+
   // register file wires
   wire [31:0] reg_rd1;
   wire [31:0] reg_rd2;
