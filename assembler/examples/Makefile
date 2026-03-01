@@ -38,6 +38,9 @@ dump: $(ELF)
 	@echo "--- Disassembly and Hex View ---"
 	$(OBJDUMP) -d $(ELF)
 
+upload: program.bin
+	python3 uploader.py
+
 # Clean up build files
 clean:
 	rm -f $(OBJS) $(ELF) $(BIN)
