@@ -1,23 +1,24 @@
 *.bin
 *.elf
 *.o
-/assembler/__pycache__
+__pycache__/
 
+# --- vivado ignore ---
 
-# --- Vivado Ignore ---
-
-# Ignore the generated build directory
+# ignore the generated build directory
 .build/
 
-# Ignore Vivado log and journal files (generated in the root)
+# ignore vivado log, journal, and protobuf files (generated in the root)
 *.jou
 *.log
 *.str
+*.pb
 
-# Ignore Xilinx temporary folders (sometimes they escape the build dir)
+# ignore xilinx temporary folders (sometimes they escape the build dir)
 .Xil/
+xsim.dir/
 
-# Ignore simulation waveform exports (if you save them manually)
+# ignore simulation waveform exports (if saved them manually)
 *.wdb
 *.vcd
 
