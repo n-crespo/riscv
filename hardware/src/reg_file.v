@@ -2,19 +2,20 @@
 // Represents the 32 general-purpose registers in a RISC-V CPU
 module reg_file (
     input         clk,
-    input         we,   // write enable
-    input  [ 4:0] rs1,  // address of first source register
-    input  [ 4:0] rs2,  // address of second source register
-    input  [ 4:0] rd,   // address of destination register
-    input  [31:0] wd,   // write data
-    output [31:0] rd1,  // read data 1
-    output [31:0] rd2   // read data 2
+    input         we,   // WRITE: switch that enables write
+    input  [ 4:0] rs1,  // READ input: address of first source register
+    input  [ 4:0] rs2,  // READ input: address of second source register
+    input  [ 4:0] rd,   // WRITE: address of destination register
+    input  [31:0] wd,   // WRITE: the data to write
+    output [31:0] rd1,  // READ output: read data 1
+    output [31:0] rd2   // READ output:read data 2
 );
 
   // 32 registers, each 32 bits wide
   reg [31:0] registers[0:31];
 
-  // read asynchronously. register 0 is hardwired to zero
+  // the default path, always on while we != 1
+  // read asynchronously. simply output the requested register's contents
   assign rd1 = (rs1 == 5'b0) ? 32'b0 : registers[rs1];
   assign rd2 = (rs2 == 5'b0) ? 32'b0 : registers[rs2];
 
@@ -25,5 +26,13 @@ module reg_file (
       registers[rd] <= wd;
     end
   end
+
+  // note: this always outputs the values of 2 registers, even if we only
+  // requested on (ex. addi). we can discard the second, unused, potentially
+  // garbage data with a mux that knows that the second argument to the ALU
+  // should be an immediate, not a register value.
+  //
+  // we only feed rd1 into the ALU directly. rd2 goes to the  mux first so that
+  // we can discard it if we don't need it.
 
 endmodule

@@ -15,7 +15,7 @@ module top (
   // a register containing 8 bits to track memory location
   reg [7:0] write_addr = 8'h0;
 
-  // wire to trigger the memory save (write enable)
+  // wire to trigger the instruction memory save
   wire mem_we;
 
   // wires for the program counter and fetched instruction
@@ -83,51 +83,71 @@ module top (
   wire        reg_we;
   wire [ 3:0] alu_ctrl;
   wire        alu_src;  // when 0, use source register, when 1 use immediate value
+  wire        data_mem_we;  // new wire for data memory write enable
+  wire        result_src;  // new wire for writeback selection
 
   control_unit ctrl (
-      .opcode  (opcode),
-      .funct3  (funct3),
-      .funct7  (funct7),
-      .reg_we  (reg_we),
-      .alu_ctrl(alu_ctrl),
-      .alu_src (alu_src)
+      .opcode    (opcode),
+      .funct3    (funct3),
+      .funct7    (funct7),
+      .reg_we    (reg_we),
+      .alu_ctrl  (alu_ctrl),
+      .alu_src   (alu_src),      // control whether we give the alu register or imm
+      .mem_we    (data_mem_we),
+      .result_src(result_src)
   );
 
-  // alu and mux wires
+  // alu, mux, and data memory wires
   wire [31:0] alu_result;
   wire        alu_zero;
   wire [31:0] alu_b_in;
-
-  // link the alu output to the register write data
-  wire [31:0] reg_wd = alu_result;
+  wire [31:0] data_rd;
+  wire [31:0] reg_wd;
 
   // register file instance
   reg_file registers (
       .clk(clk),
-      .we (reg_we),
-      .rs1(rs1),
-      .rs2(rs2),
-      .rd (rd),
-      .wd (reg_wd),
-      .rd1(reg_rd1),
-      .rd2(reg_rd2)
+      .we (reg_we),   // write enable?
+      .rs1(rs1),      // the address of a register we want to read from
+      .rs2(rs2),      // the address of a register we want to read from
+      .rd (rd),       // the address of the destination register
+      .wd (reg_wd),   // the actual data to write
+      .rd1(reg_rd1),  // read output 1
+      .rd2(reg_rd2)   // read output 2
   );
 
-  // mux to select between register 2 and immediate value
+  // selects between register and immediate value for the alu
   mux2 alu_mux (
       .d0 (reg_rd2),
       .d1 (imm_val),
-      .sel(alu_src),
+      .sel(alu_src),  // 0: add 2 registers, 1: immediate value
       .out(alu_b_in)
   );
 
   // alu instance
   alu main_alu (
       .a       (reg_rd1),
-      .b       (alu_b_in),    // now driven by the mux
+      .b       (alu_b_in),
       .alu_ctrl(alu_ctrl),
       .out     (alu_result),
       .zero    (alu_zero)
+  );
+
+  // data memory instance
+  data_mem ram_blocks (
+      .clk (clk),
+      .we  (data_mem_we),
+      .addr(alu_result[7:0]),  // address is calculated by the alu
+      .wd  (reg_rd2),          // data to save comes from register 2
+      .rd  (data_rd)           // read data output
+  );
+
+  // mux to select between alu result and memory read data for the register file
+  mux2 writeback_mux (
+      .d0 (alu_result),
+      .d1 (data_rd),
+      .sel(result_src),
+      .out(reg_wd)
   );
 
   always @(posedge clk) begin
