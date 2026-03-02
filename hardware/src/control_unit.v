@@ -8,7 +8,11 @@ module control_unit (
     output reg [3:0] alu_ctrl,
     output reg alu_src,
     output reg mem_we,     // data memory write enable
-    output reg result_src  // 0 for alu result, 1 for memory read data
+    output reg result_src,  // 0 for alu result, 1 for memory read data
+
+    // conditionals/loops
+    output reg branch,  // 1 when branch instruction received
+    output reg jump  // 1 when jump instruction received
 );
 
   // determine control signals based on opcode
@@ -19,6 +23,8 @@ module control_unit (
     alu_src    = 1'b0;
     mem_we     = 1'b0;
     result_src = 1'b0;
+    branch     = 1'b0;
+    jump       = 1'b0;
 
     case (opcode)
       // r-type instructions (add, sub, and, or, etc)
@@ -93,12 +99,36 @@ module control_unit (
         result_src = 1'b0;  // doesn't matter, reg_we is 0
       end
 
+      // branch instructions
+      7'b1100011: begin
+        reg_we     = 1'b0;
+        alu_src    = 1'b0;  // compare two registers
+        alu_ctrl   = 4'b0001;  // subtract
+        mem_we     = 1'b0;
+        result_src = 1'b0;
+        branch     = 1'b1;  // flag as a branch
+        jump       = 1'b0;
+      end
+
+      // jump instructions
+      7'b1101111: begin
+        reg_we     = 1'b1;  // save return address
+        alu_src    = 1'b0;
+        alu_ctrl   = 4'b0000;
+        mem_we     = 1'b0;
+        result_src = 1'b0;
+        branch     = 1'b0;
+        jump       = 1'b1;  // flag as a jump
+      end
+
       default: begin
         reg_we     = 1'b0;
         alu_ctrl   = 4'b0000;
         alu_src    = 1'b0;
         mem_we     = 1'b0;
         result_src = 1'b0;
+        branch     = 1'b0;
+        jump       = 1'b0;
       end
     endcase
   end

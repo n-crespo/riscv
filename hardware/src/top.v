@@ -5,22 +5,28 @@ module top (
     output [15:0] led  // displaying 16 bits of the 32-bit instruction
 );
 
-  wire rx_dv;  // data valid?
-  wire [7:0] rx_byte;  // will carry bytes of the serial data
+  wire        rx_dv;  // data valid?
+  wire [ 7:0] rx_byte;  // will carry bytes of the serial data
 
   // a register holding the 32 instruction bits, currently set to all zeros in hex
-  reg [31:0] instruction_reg = 32'h0;
+  reg  [31:0] instruction_reg = 32'h0;
   // a register containing 2 bits, initialized to 00 in binary
-  reg [1:0] byte_count = 2'b00;
+  reg  [ 1:0] byte_count = 2'b00;
   // a register containing 8 bits to track memory location
-  reg [7:0] write_addr = 8'h0;
+  reg  [ 7:0] write_addr = 8'h0;
 
   // wire to trigger the instruction memory save
-  wire mem_we;
+  wire        mem_we;
 
   // wires for the program counter and fetched instruction
-  wire [7:0] pc_wire;
+  wire [ 7:0] pc_wire;
   wire [31:0] fetched_instruction;
+
+  // branching and jump logic
+  wire        branch;
+  wire        jump;
+  wire        take_jump;  // 1 when we need to jump to target_pc
+  wire [ 7:0] target_pc;  // the address of the instruction we need to jump to
 
   uart_rx #(
       .CLKS_PER_BIT(10416)
@@ -33,9 +39,11 @@ module top (
 
   // program counter instance
   pc program_counter (
-      .clk(clk),
-      .reset(reset),
-      .pc_out(pc_wire)
+      .clk      (clk),
+      .reset    (reset),
+      .take_jump(take_jump),
+      .target_pc(target_pc),
+      .pc_out   (pc_wire)
   );
 
   // filing cabinet to store instructions
@@ -94,7 +102,9 @@ module top (
       .alu_ctrl  (alu_ctrl),
       .alu_src   (alu_src),      // control whether we give the alu register or imm
       .mem_we    (data_mem_we),
-      .result_src(result_src)
+      .result_src(result_src),
+      .branch    (branch),
+      .jump      (jump)
   );
 
   // alu, mux, and data memory wires
@@ -103,6 +113,14 @@ module top (
   wire [31:0] alu_b_in;
   wire [31:0] data_rd;
   wire [31:0] reg_wd;
+
+  // jump target calculation
+  // pc increments by 1 (word-addressed) but immediates are byte-addressed
+  // shift immediate right by 2 to divide by 4 and get the word offset
+  assign target_pc = pc_wire + imm_val[9:2];
+
+  // logic gate determining if the pc should actually jump
+  assign take_jump = jump | (branch & alu_zero);  // alu_zero is 1 when beq resolved as true
 
   // register file instance
   reg_file registers (
