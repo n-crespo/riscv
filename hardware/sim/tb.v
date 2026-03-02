@@ -1,5 +1,19 @@
 `timescale 1ns / 1ps
 
+// this tests:
+// - arithmetic operations (r_type and i_type)
+// - loading and storing data to RAM (lw and sw)
+// - sign extension of negative constants by immediate generator
+//
+// - jumping and branching causes nonsequential program counter (beq, jal)
+// - jal saves correct return address into destination register
+// - jumps are ignored when branch condition is false
+//
+// - register x0 cannot be written to and is always zero
+// - Read-after-write (using a result calculated in previous instruction)
+// - memory throughput (consecutive mempory store/load without corruption)
+// - control unit disables all write-enables on invalid opcode
+
 module tb;
 
   reg clk;
