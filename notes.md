@@ -14,12 +14,12 @@ This creates a bottleneck at the register file.
   integers (INT8). In a single cycle, it multiplies all four pairs and adds the
   sum to a 32-bit accumulator.
 - **Benefit over CPU/GPU:**
-  - **vs. CPU:** A CPU would take ~12 instructions to do what this does in 1. This
-    reduces power consumption by 50–80% for the same task.
+  - **vs. CPU:** A CPU would take ~12 instructions to do what this does in 1.
+    This reduces power consumption by 50–80% for the same task.
   - **vs. GPU:** GPUs are fast but "jittery." They have variable latency due to
-    driver overhead. This extension provides **deterministic latency**—you know
-    exactly which clock cycle the result will be ready, which is critical for
-    safety-critical robotics.
+    driver overhead. This extension provides **deterministic latency**, meaning
+    you know exactly which clock cycle the result will be ready, which is critical
+    for safety-critical robotics.
 
 ---
 
