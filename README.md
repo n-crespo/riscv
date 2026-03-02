@@ -63,6 +63,10 @@ graph LR
   WMUX -- reg_wd --> REG
 ```
 
+A more human friendly version:
+
+![RISC-V Architecture Diagram](docs/lab4.png)
+
 ## Technical Specifications
 
 - **Architecture**: 32-bit RISC-V (RV32I subset).
