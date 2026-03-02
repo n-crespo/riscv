@@ -1,9 +1,6 @@
 # Plan (nicolas)
 
-- data memory module (ram)
-- control unit branching (so loops work)
-
-- LATER: debug environment?
+- debug environment?
   - map program counter to LEDs
 
 ## Fused-MAC Extension
