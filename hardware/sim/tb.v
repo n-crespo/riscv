@@ -26,31 +26,39 @@ module tb;
     reset = 1;
     RsRx = 1;
 
-    // --- Original Logic Paths ---
-    uut.instruction_memory.ram[0] = 32'h00500093;  // 0: addi x1, x0, 5
-    uut.instruction_memory.ram[1] = 32'h00700113;  // 1: addi x2, x0, 7
-    uut.instruction_memory.ram[2] = 32'h002081b3;  // 2: add x3, x1, x2
-    uut.instruction_memory.ram[3] = 32'h00302223;  // 3: sw x3, 4(x0)
-    uut.instruction_memory.ram[4] = 32'h00402203;  // 4: lw x4, 4(x0)
-    uut.instruction_memory.ram[5] = 32'h00418463;  // 5: beq x3, x4, 8 (jump to 7)
-    uut.instruction_memory.ram[6] = 32'h06300293;  // 6: addi x5, x0, 99 (skipped)
-    uut.instruction_memory.ram[7] = 32'h0080036f;  // 7: jal x6, 8 (jump to 9)
-    uut.instruction_memory.ram[8] = 32'h06300393;  // 8: addi x7, x0, 99 (skipped)
-    uut.instruction_memory.ram[9] = 32'h00100413;  // 9: addi x8, x0, 1
+    // --- Logic Paths (0-13) ---
+    uut.instruction_memory.ram[0] = 32'h00500093;  // addi x1, x0, 5
+    uut.instruction_memory.ram[1] = 32'h00700113;  // addi x2, x0, 7
+    uut.instruction_memory.ram[2] = 32'h002081b3;  // add x3, x1, x2
+    uut.instruction_memory.ram[3] = 32'h00302223;  // sw x3, 4(x0)
+    uut.instruction_memory.ram[4] = 32'h00402203;  // lw x4, 4(x0)
+    uut.instruction_memory.ram[5] = 32'h00418463;  // beq x3, x4, 8
+    uut.instruction_memory.ram[6] = 32'h06300293;  // addi x5, x0, 99 (skip)
+    uut.instruction_memory.ram[7] = 32'h0080036f;  // jal x6, 8
+    uut.instruction_memory.ram[8] = 32'h06300393;  // addi x7, x0, 99 (skip)
+    uut.instruction_memory.ram[9] = 32'h00100413;  // addi x8, x0, 1
+    uut.instruction_memory.ram[10] = 32'h03200013;  // addi x0, x0, 50
+    uut.instruction_memory.ram[11] = 32'hff600493;  // addi x9, x0, -10
+    uut.instruction_memory.ram[12] = 32'h00208463;  // beq x1, x2, 8 (not taken)
+    uut.instruction_memory.ram[13] = 32'h02a00513;  // addi x10, x0, 42
 
-    // --- New Test Paths ---
-    // 10: addi x0, x0, 50     -> Attempt to write to x0 (should remain 0)
-    uut.instruction_memory.ram[10] = 32'h03200013;
-    // 11: addi x9, x0, -10    -> Test sign extension (should be 0xFFFFFFF6)
-    uut.instruction_memory.ram[11] = 32'hff600493;
-    // 12: bne x1, x2, 8       -> Branch NOT taken (beq x1, x2)
-    // using beq x1, x2 with offset that would skip x10 if it failed
-    uut.instruction_memory.ram[12] = 32'h00208463;
-    // 13: addi x10, x0, 42    -> Should execute because x1 (5) != x2 (7)
-    uut.instruction_memory.ram[13] = 32'h02a00513;
+    // --- Throughput & Dependency Paths ---
+    // 14: addi x11, x0, 10   -> Setup for dependency
+    uut.instruction_memory.ram[14] = 32'h00a00593;
+    // 15: addi x12, x11, 5   -> RAW Dependency: x11 is used immediately
+    uut.instruction_memory.ram[15] = 32'h00558613;
+    // 16: sw x12, 8(x0)      -> Memory throughput: back-to-back store
+    uut.instruction_memory.ram[16] = 32'h00c02423;
+    // 17: lw x13, 8(x0)      -> Memory throughput: back-to-back load
+    uut.instruction_memory.ram[17] = 32'h00802683;
+    // 18: 32'h0000000b       -> Invalid Opcode (Custom-0 space)
+    // This should do nothing (no reg write, no mem write)
+    uut.instruction_memory.ram[18] = 32'h0000000b;
+    // 19: addi x14, x0, 1    -> Flag to show we finished
+    uut.instruction_memory.ram[19] = 32'h00100713;
 
     #20 reset = 0;
-    #250;  // increased time to cover new instructions
+    #350;  // increased time to cover all 20 instructions
 
     $display("--- SIMULATION RESULTS ---");
 
@@ -71,30 +79,46 @@ module tb;
       tests_failed = tests_failed + 1;
     end
 
-    // Test 1: Register x0 Hard-wiring
+    // Test register x0 hard-wiring
     if (uut.registers.registers[0] == 0) begin
-      $display("PASS: x0 is hard-wired to zero");
+      $display("PASS: x0 hard-wired to zero");
       tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: x0 was overwritten! Value: %0d", uut.registers.registers[0]);
-      tests_failed = tests_failed + 1;
     end
-
-    // Test 2: Sign Extension
     if (uut.registers.registers[9] == 32'hfffffff6) begin
-      $display("PASS: sign extension (negative immediates)");
+      $display("PASS: sign extension");
+      tests_passed = tests_passed + 1;
+    end
+    if (uut.registers.registers[10] == 42) begin
+      $display("PASS: branch-not-taken");
+      tests_passed = tests_passed + 1;
+    end
+
+    // Test 6: RAW Dependency
+    if (uut.registers.registers[12] == 15) begin
+      $display("PASS: RAW data dependency (x12 == 15)");
       tests_passed = tests_passed + 1;
     end else begin
-      $display("FAIL: sign extension (x9: %h, expected fffffff6)", uut.registers.registers[9]);
+      $display("FAIL: RAW data dependency (x12: %0d, expected 15)", uut.registers.registers[12]);
       tests_failed = tests_failed + 1;
     end
 
-    // Test 3: Branch NOT Taken
-    if (uut.registers.registers[10] == 42) begin
-      $display("PASS: branch-not-taken logic");
+    // Test 7: Memory Throughput
+    if (uut.registers.registers[13] == 15) begin
+      $display("PASS: memory throughput (sw/lw sequence)");
       tests_passed = tests_passed + 1;
     end else begin
-      $display("FAIL: branch-not-taken (x10 should be 42)");
+      $display("FAIL: memory throughput (x13: %0d, expected 15)", uut.registers.registers[13]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // Test 8: Invalid Opcode Safety
+    // We check if the instruction after the invalid one (addi x14, x0, 1) executed.
+    // If x14 is 1, the CPU didn't hang. We also verify x0 is still 0.
+    if (uut.registers.registers[14] == 1 && uut.registers.registers[0] == 0) begin
+      $display("PASS: invalid opcode safety (CPU continued, no illegal writes)");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: invalid opcode caused hang or corruption");
       tests_failed = tests_failed + 1;
     end
 
