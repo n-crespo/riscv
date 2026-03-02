@@ -9,7 +9,7 @@ module instr_mem (
 
     // port b: for the cpu to read instructions
     input [7:0] addr_b,     // which address the cpu wants the instruction of
-    output reg [31:0] dout_b // data out (32 bit instruction)
+    output wire [31:0] dout_b // data out (32 bit instruction)
 );
 
   // 256 slots, each 32 bits wide
@@ -23,8 +23,6 @@ module instr_mem (
   end
 
   // Read Logic (Port B)
-  always @(posedge clk) begin
-    dout_b <= ram[addr_b];
-  end
+  assign dout_b = ram[addr_b];
 
 endmodule

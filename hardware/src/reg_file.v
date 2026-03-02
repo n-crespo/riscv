@@ -19,6 +19,13 @@ module reg_file (
   assign rd1 = (rs1 == 5'b0) ? 32'b0 : registers[rs1];
   assign rd2 = (rs2 == 5'b0) ? 32'b0 : registers[rs2];
 
+  integer i;
+  initial begin
+    for (i = 0; i < 32; i = i + 1) begin
+      registers[i] = 32'b0;
+    end
+  end
+
   // write synchronously on the clock edge
   always @(posedge clk) begin
     // never overwrite register 0

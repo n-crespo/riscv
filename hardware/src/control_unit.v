@@ -8,7 +8,7 @@ module control_unit (
     output reg [3:0] alu_ctrl,
     output reg alu_src,
     output reg mem_we,     // data memory write enable
-    output reg result_src,  // 0 for alu result, 1 for memory read data
+    output reg [1:0] result_src,  // 0 for alu result, 1 for memory read data, 10 for
 
     // conditionals/loops
     output reg branch,  // 1 when branch instruction received
@@ -22,7 +22,7 @@ module control_unit (
     alu_ctrl   = 4'b0000;
     alu_src    = 1'b0;
     mem_we     = 1'b0;
-    result_src = 1'b0;
+    result_src = 2'b00;
     branch     = 1'b0;
     jump       = 1'b0;
 
@@ -87,7 +87,7 @@ module control_unit (
         alu_src    = 1'b1;  // add the immediate offset to the base address
         alu_ctrl   = 4'b0000;  // standard addition
         mem_we     = 1'b0;  // reading from memory, not writing
-        result_src = 1'b1;  // route memory data to register file instead of alu result
+        result_src = 2'b01;  // route memory data to register file instead of alu result
       end
 
       // store instructions (sw)
@@ -116,7 +116,7 @@ module control_unit (
         alu_src    = 1'b0;
         alu_ctrl   = 4'b0000;
         mem_we     = 1'b0;
-        result_src = 1'b0;
+        result_src = 2'b10;  // flag to select PC + 1
         branch     = 1'b0;
         jump       = 1'b1;  // flag as a jump
       end

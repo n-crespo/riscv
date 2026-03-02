@@ -91,8 +91,8 @@ module top (
   wire        reg_we;
   wire [ 3:0] alu_ctrl;
   wire        alu_src;  // when 0, use source register, when 1 use immediate value
-  wire        data_mem_we;  // new wire for data memory write enable
-  wire        result_src;  // new wire for writeback selection
+  wire        data_mem_we;  // wire for data memory write enable
+  wire [ 1:0] result_src;  // wire for writeback selection
 
   control_unit ctrl (
       .opcode    (opcode),
@@ -121,6 +121,14 @@ module top (
 
   // logic gate determining if the pc should actually jump
   assign take_jump = jump | (branch & alu_zero);  // alu_zero is 1 when beq resolved as true
+
+  // wire to calculate the return address
+  wire [31:0] pc_plus_one = {24'b0, pc_wire + 1'b1};
+
+  // replaces writeback_mux: 3-way selector
+  assign reg_wd = (result_src == 2'b10) ? pc_plus_one :
+                (result_src == 2'b01) ? data_rd :
+                                        alu_result;
 
   // register file instance
   reg_file registers (
@@ -161,12 +169,12 @@ module top (
   );
 
   // mux to select between alu result and memory read data for the register file
-  mux2 writeback_mux (
-      .d0 (alu_result),
-      .d1 (data_rd),
-      .sel(result_src),
-      .out(reg_wd)
-  );
+  // mux2 writeback_mux (
+  //     .d0 (alu_result),
+  //     .d1 (data_rd),
+  //     .sel(result_src),
+  //     .out(reg_wd)
+  // );
 
   always @(posedge clk) begin
     if (rx_dv) begin
