@@ -71,8 +71,35 @@ module tb;
     // 19: addi x14, x0, 1    -> Flag to show we finished
     uut.instruction_memory.ram[19] = 32'h00100713;
 
-    #20 reset = 0;
-    #350;  // increased time to cover all 20 instructions
+    // 20: addi x15, x0, 128    -> Base address 0x80
+    uut.instruction_memory.ram[20] = 32'h08000793;
+
+    // 21: addi x16, x0, 0      -> Set Threshold = 0 (ANY color becomes white)
+    uut.instruction_memory.ram[21] = 32'h00000813;
+
+    // 22: sw x16, 4(x15)       -> Store 0 to 0x84
+    uut.instruction_memory.ram[22] = 32'h0107a223;
+
+    // 23: addi x17, x0, 255    -> Load 255 (Bright Blue) using standard ADDI
+    uut.instruction_memory.ram[23] = 32'h0ff00893;
+
+    // 24: sw x17, 0(x15)       -> Send pixel to 0x80
+    uut.instruction_memory.ram[24] = 32'h0117a023;
+
+    // --- NOPs for Pipeline Latency ---
+    uut.instruction_memory.ram[25] = 32'h00000013;  // nop
+    uut.instruction_memory.ram[26] = 32'h00000013;  // nop
+
+    // 27: lw x18, 0(x15)       -> Read result back
+    uut.instruction_memory.ram[27] = 32'h0007a903;
+
+    // 28: jal x0, 0            -> INFINITE LOOP (Stay here forever)
+    // This prevents the PC from wrapping back to 0 and ruining your results.
+    uut.instruction_memory.ram[28] = 32'h0000006f;
+
+    // Adjust the run time to ensure PC reaches index 27
+    #22 reset = 0;  // de-assert reset away from clock edge
+    #1000;  // give it plenty of time
 
     $display("--- SIMULATION RESULTS ---");
 
@@ -133,6 +160,14 @@ module tb;
       tests_passed = tests_passed + 1;
     end else begin
       $display("FAIL: invalid opcode caused hang or corruption");
+      tests_failed = tests_failed + 1;
+    end
+
+    if (uut.registers.registers[18] == 32'h00FFFFFF) begin
+      $display("PASS: pixel accelerator (result is white)");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: pixel accelerator (x18: %h, expected 00FFFFFF)", uut.registers.registers[18]);
       tests_failed = tests_failed + 1;
     end
 

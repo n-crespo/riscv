@@ -125,9 +125,22 @@ module top (
   // wire to calculate the return address
   wire [31:0] pc_plus_one = {24'b0, pc_wire + 1'b1};
 
-  // replaces writeback_mux: 3-way selector
+  // logic to determine if we are accessing the accelerator
+  // if address >= 128 (8'h80), it's the pixel processor
+  wire        is_accel_addr = alu_result[7];
+
+  // split the write enable signal
+  wire        ram_we_wire = data_mem_we & !is_accel_addr;
+  wire        accel_we_wire = data_mem_we & is_accel_addr;
+
+  // wire for data coming back from the hardware
+  wire [31:0] accel_dout;
+
+  // choose between ram and accelerator data
+  wire [31:0] final_data_rd = is_accel_addr ? accel_dout : data_rd;
+
   assign reg_wd = (result_src == 2'b10) ? pc_plus_one :
-                (result_src == 2'b01) ? data_rd :
+                (result_src == 2'b01) ? final_data_rd :
                                         alu_result;
 
   // register file instance
@@ -162,19 +175,21 @@ module top (
   // data memory instance
   data_mem ram_blocks (
       .clk (clk),
-      .we  (data_mem_we),
+      .we  (ram_we_wire),      // controlled by snooper signal
       .addr(alu_result[7:0]),  // address is calculated by the alu
       .wd  (reg_rd2),          // data to save comes from register 2
       .rd  (data_rd)           // read data output
   );
 
-  // mux to select between alu result and memory read data for the register file
-  // mux2 writeback_mux (
-  //     .d0 (alu_result),
-  //     .d1 (data_rd),
-  //     .sel(result_src),
-  //     .out(reg_wd)
-  // );
+  // pixel processor instance
+  pixel_processor img_engine (
+      .clk  (clk),
+      .reset(reset),
+      .we   (accel_we_wire),
+      .addr (alu_result[3:2]),  // changed from [1:0] to [3:2] for word alignment
+      .din  (reg_rd2),          // same data source as RAM
+      .dout (accel_dout)        // result sent back to CPU
+  );
 
   always @(posedge clk) begin
     if (rx_dv) begin

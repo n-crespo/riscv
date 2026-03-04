@@ -31,7 +31,9 @@ module mac #(
       accum <= 32'd0;
     end else if (clr) begin
       accum <= 32'd0;
-    end else if (en) begin
+    end else begin
+      // always add the mult_reg to c, so it catches
+      // the result even after 'en' goes low
       accum <= mult_reg + c;
     end
   end
