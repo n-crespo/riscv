@@ -8,11 +8,12 @@ module control_unit (
     output reg [3:0] alu_ctrl,
     output reg alu_src,
     output reg mem_we,     // data memory write enable
-    output reg [1:0] result_src,  // 0 for alu result, 1 for memory read data, 10 for
+    output reg [1:0] result_src,  // 0 for alu result, 1 for mem read, 10 for pc+1
 
     // conditionals/loops
     output reg branch,  // 1 when branch instruction received
-    output reg jump  // 1 when jump instruction received
+    output reg jump,  // 1 when jal instruction received
+    output reg jalr_flag  // 1 when jalr instruction received
 );
 
   // determine control signals based on opcode
@@ -25,6 +26,7 @@ module control_unit (
     result_src = 2'b00;
     branch     = 1'b0;
     jump       = 1'b0;
+    jalr_flag  = 1'b0;
 
     case (opcode)
       // r-type instructions (add, sub, and, or, etc)
@@ -110,7 +112,7 @@ module control_unit (
         jump       = 1'b0;
       end
 
-      // jump instructions
+      // jump instruction (jal)
       7'b1101111: begin
         reg_we     = 1'b1;  // save return address
         alu_src    = 1'b0;
@@ -118,7 +120,19 @@ module control_unit (
         mem_we     = 1'b0;
         result_src = 2'b10;  // flag to select PC + 1
         branch     = 1'b0;
-        jump       = 1'b1;  // flag as a jump
+        jump       = 1'b1;  // flag as a jal
+      end
+
+      // jump and link register (jalr)
+      7'b1100111: begin
+        reg_we     = 1'b1;  // save return address (PC + 1)
+        alu_src    = 1'b1;  // route immediate into ALU
+        alu_ctrl   = 4'b0000;  // ALU does addition (rs1 + imm)
+        mem_we     = 1'b0;
+        result_src = 2'b10;  // flag to select PC + 1 for the register file
+        branch     = 1'b0;
+        jump       = 1'b0;  // handled by jalr_flag instead
+        jalr_flag  = 1'b1;  // flag as a jalr
       end
 
       default: begin
@@ -129,6 +143,7 @@ module control_unit (
         result_src = 1'b0;
         branch     = 1'b0;
         jump       = 1'b0;
+        jalr_flag  = 1'b0;
       end
     endcase
   end
