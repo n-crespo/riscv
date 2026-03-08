@@ -25,11 +25,11 @@ project:
 	@echo [INFO] Creating Project: $(PROJECT_NAME) -- Top: $(TOP_MODULE)
 	$(VIVADO_CMD) -source $(TCL_DIR)/create_project.tcl -tclargs $(PROJECT_NAME) $(TOP_MODULE) $(BUILD_DIR) $(SRC_DIR) $(SIM_DIR)
 
-sim:
-	@echo [INFO] Running Simulation: $(TB_MODULE)
-	$(VIVADO_CMD) -source $(TCL_DIR)/simulate.tcl -tclargs $(PROJECT_NAME) $(BUILD_DIR) $(TB_MODULE)
+# sim:
+# 	@echo [INFO] Running Simulation: $(TB_MODULE)
+# 	$(VIVADO_CMD) -source $(TCL_DIR)/simulate.tcl -tclargs $(PROJECT_NAME) $(BUILD_DIR) $(TB_MODULE)
 
-fast_sim:
+sim:
 	@echo [INFO] Compiling Verilog...
 	"$(VIVADO_BIN)xvlog" $(SRC_DIR)/*.v $(SIM_DIR)/*.v
 	@echo [INFO] Elaborating...

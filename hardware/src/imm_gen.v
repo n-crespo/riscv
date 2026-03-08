@@ -9,7 +9,8 @@ module imm_gen (
   always @(*) begin
     case (opcode)
       // i-type instructions (addi, lw, etc)
-      7'b0010011, 7'b0000011: begin
+      7'b0010011, 7'b0000011, 7'b1100111: begin
+        // sign extension, extract constant from instruction
         imm_out = {{20{instr[31]}}, instr[31:20]};
       end
 

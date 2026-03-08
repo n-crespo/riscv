@@ -93,9 +93,24 @@ module tb;
     // 27: lw x18, 0(x15)       -> Read result back
     uut.instruction_memory.ram[27] = 32'h0007a903;
 
-    // 28: jal x0, 0            -> INFINITE LOOP (Stay here forever)
-    // This prevents the PC from wrapping back to 0 and ruining your results.
-    uut.instruction_memory.ram[28] = 32'h0000006f;
+    // --- JALR Function Call Test ---
+    // 28: jal x1, 12           -> Jump forward 3 words (to index 31). Save '29' in x1.
+    uut.instruction_memory.ram[28] = 32'h00c000ef;
+
+    // 29: addi x19, x0, 99     -> RETURN POINT. Set x19 = 99 to prove we came back.
+    uut.instruction_memory.ram[29] = 32'h06300993;
+
+    // 30: jal x0, 12           -> ESCAPE. Jump forward 3 words to index 33 (Infinite Loop).
+    uut.instruction_memory.ram[30] = 32'h00c0006f;
+
+    // 31: addi x20, x0, 42     -> FUNCTION BODY. Set x20 = 42 to prove we jumped here.
+    uut.instruction_memory.ram[31] = 32'h02a00a13;
+
+    // 32: jalr x0, 0(x1)       -> RETURN. Jump to address in x1 (which is 29).
+    uut.instruction_memory.ram[32] = 32'h00008067;
+
+    // 33: jal x0, 0            -> INFINITE LOOP (Park here forever)
+    uut.instruction_memory.ram[33] = 32'h0000006f;
 
     // Adjust the run time to ensure PC reaches index 27
     #22 reset = 0;  // de-assert reset away from clock edge
@@ -168,6 +183,17 @@ module tb;
       tests_passed = tests_passed + 1;
     end else begin
       $display("FAIL: pixel accelerator (x18: %h, expected 00FFFFFF)", uut.registers.registers[18]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // Test 10: Function Call and Return (jalr)
+    // We expect x20 == 42 (function executed) AND x19 == 99 (returned successfully)
+    if (uut.registers.registers[20] == 42 && uut.registers.registers[19] == 99) begin
+      $display("PASS: jalr function return");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: jalr function return (x20: %0d, x19: %0d)", uut.registers.registers[20],
+               uut.registers.registers[19]);
       tests_failed = tests_failed + 1;
     end
 

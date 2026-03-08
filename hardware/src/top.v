@@ -93,6 +93,7 @@ module top (
   wire        alu_src;  // when 0, use source register, when 1 use immediate value
   wire        data_mem_we;  // wire for data memory write enable
   wire [ 1:0] result_src;  // wire for writeback selection
+  wire        jalr_flag;  // wire for jalr signal
 
   control_unit ctrl (
       .opcode    (opcode),
@@ -104,7 +105,8 @@ module top (
       .mem_we    (data_mem_we),
       .result_src(result_src),
       .branch    (branch),
-      .jump      (jump)
+      .jump      (jump),
+      .jalr_flag (jalr_flag)
   );
 
   // alu, mux, and data memory wires
@@ -115,12 +117,13 @@ module top (
   wire [31:0] reg_wd;
 
   // jump target calculation
-  // pc increments by 1 (word-addressed) but immediates are byte-addressed
-  // shift immediate right by 2 to divide by 4 and get the word offset
-  assign target_pc = pc_wire + imm_val[9:2];
+  // jal/branch: pc + (immediate / 4)
+  // jalr: use the exact word-index stored in the register (alu_result)
+  assign target_pc = jalr_flag ? alu_result[7:0] : (pc_wire + imm_val[9:2]);
 
   // logic gate determining if the pc should actually jump
-  assign take_jump = jump | (branch & alu_zero);  // alu_zero is 1 when beq resolved as true
+  // we jump if it's a jal, a jalr, or a successful branch
+  assign take_jump = jump | jalr_flag | (branch & alu_zero);
 
   // wire to calculate the return address
   wire [31:0] pc_plus_one = {24'b0, pc_wire + 1'b1};
