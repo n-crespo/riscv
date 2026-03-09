@@ -159,19 +159,43 @@ module tb;
     // 49: lw x24, 0(x25)       // load the full word back into x24 to check the damage
     uut.instruction_memory.ram[49] = 32'h000cac03;
 
-    // 50: jal x0, 0            // infinite loop (park here forever)
-    uut.instruction_memory.ram[50] = 32'h0000006f;
+    // --- branch comparator tests ---
+    // set up test values
+    // 50: addi x21, x0, 10
+    uut.instruction_memory.ram[50] = 32'h00a00a93;
+    // 51: addi x22, x0, -5
+    uut.instruction_memory.ram[51] = 32'hffb00b13;
 
-    // adjust the run time to ensure PC reaches index 50
+    // test bne: 10 != -5
+    // 52: addi x28, x0, 0       // initialize flag to 0
+    // test bne (10 != -5)
+    // initialize flag to 0
+    uut.instruction_memory.ram[52] = 32'h00000293;
+    uut.instruction_memory.ram[53] = 32'h016a9463;
+    uut.instruction_memory.ram[54] = 32'h0080006f;
+    // success, set x5 to 1
+    uut.instruction_memory.ram[55] = 32'h00100293;
+
+    // test blt (-5 < 10)
+    // initialize flag to 0
+    uut.instruction_memory.ram[56] = 32'h00000313;
+    uut.instruction_memory.ram[57] = 32'h015b4463;
+    uut.instruction_memory.ram[58] = 32'h0080006f;
+    // success, set x6 to 1
+    uut.instruction_memory.ram[59] = 32'h00100313;
+
+    // test bge (10 >= -5)
+    // initialize flag to 0
+    uut.instruction_memory.ram[60] = 32'h00000393;
+    uut.instruction_memory.ram[61] = 32'h016ad463;
+    uut.instruction_memory.ram[62] = 32'h0080006f;
+
+    // success, set x7 to 1
+    uut.instruction_memory.ram[63] = 32'h00100393;
+    // --- clean, consolidated time delay ---
+    // adjust the run time to ensure PC reaches the final index
     #22 reset = 0;
-    #1600;  // bumped up slightly for the extra instructions
-
-    // Adjust the run time to ensure PC reaches index 47
-    #22 reset = 0;
-    #1500;  // INCREASED from 1000 to 1500 to account for the new instructions!
-
-    #22 reset = 0;  // de-assert reset away from clock edge
-    #1000;  // give it plenty of time
+    #2000;
 
     $display("--- SIMULATION RESULTS ---");
 
@@ -290,6 +314,33 @@ module tb;
       tests_passed = tests_passed + 1;
     end else begin
       $display("FAIL: sh logic (x24: %h, expected 05A5BBAA)", uut.registers.registers[24]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // test 15: bne (branch not equal)
+    if (uut.registers.registers[5] == 1) begin
+      $display("PASS: bne logic");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: bne logic (x5: %0d)", uut.registers.registers[5]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // test 16: blt (branch less than)
+    if (uut.registers.registers[6] == 1) begin
+      $display("PASS: blt logic");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: blt logic (x6: %0d)", uut.registers.registers[6]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // test 17: bge (branch greater than or equal)
+    if (uut.registers.registers[7] == 1) begin
+      $display("PASS: bge logic");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: bge logic (x7: %0d)", uut.registers.registers[7]);
       tests_failed = tests_failed + 1;
     end
 

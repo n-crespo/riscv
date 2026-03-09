@@ -116,6 +116,8 @@ module top (
   wire [31:0] data_rd;
   wire [31:0] reg_wd;
 
+  wire        branch_condition_met;
+
   // jump target calculation
   // jal/branch: pc + (immediate / 4)
   // jalr: use the exact word-index stored in the register (alu_result)
@@ -123,7 +125,7 @@ module top (
 
   // logic gate determining if the pc should actually jump
   // we jump if it's a jal, a jalr, or a successful branch
-  assign take_jump = jump | jalr_flag | (branch & alu_zero);
+  assign take_jump = jump | jalr_flag | branch_condition_met;
 
   // wire to calculate the return address
   wire [31:0] pc_plus_one = {24'b0, pc_wire + 1'b1};
@@ -173,6 +175,15 @@ module top (
       .alu_ctrl(alu_ctrl),
       .out     (alu_result),
       .zero    (alu_zero)
+  );
+
+  // determine what kind of branching we're doing
+  branch_comparator branch_comp (
+      .branch  (branch),
+      .funct3  (funct3),
+      .rs1_data(reg_rd1),
+      .rs2_data(reg_rd2),
+      .take    (branch_condition_met)
   );
 
   // data memory instance
