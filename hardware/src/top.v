@@ -177,11 +177,13 @@ module top (
 
   // data memory instance
   data_mem ram_blocks (
-      .clk (clk),
-      .we  (ram_we_wire),      // controlled by snooper signal
-      .addr(alu_result[7:0]),  // address is calculated by the alu
-      .wd  (reg_rd2),          // data to save comes from register 2
-      .rd  (data_rd)           // read data output
+      .clk        (clk),
+      .we         (ram_we_wire),      // controlled by snooper signal
+      .funct3     (funct3),           // pass the instruction type
+      .word_addr  (alu_result[9:2]),  // the row in ram
+      .byte_offset(alu_result[1:0]),  // the column in row in ram
+      .wd         (reg_rd2),          // data to save comes from register 2
+      .rd         (data_rd)           // read data output
   );
 
   // pixel processor instance

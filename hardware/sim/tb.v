@@ -109,10 +109,67 @@ module tb;
     // 32: jalr x0, 0(x1)       -> RETURN. Jump to address in x1 (which is 29).
     uut.instruction_memory.ram[32] = 32'h00008067;
 
-    // 33: jal x0, 0            -> INFINITE LOOP (Park here forever)
-    uut.instruction_memory.ram[33] = 32'h0000006f;
+    // --- Sub-Word Memory Access Tests ---
+    // 33: addi x25, x0, 64     -> Set base address to 64
+    uut.instruction_memory.ram[33] = 32'h04000c93;
 
-    // Adjust the run time to ensure PC reaches index 27
+    // Store 4 individual bytes sequentially to build the word 0xDDCCBBAA
+    // 34: addi x26, x0, 0xAA   -> Load 0xAA into x26
+    uut.instruction_memory.ram[34] = 32'h0aa00d13;
+    // 35: sb x26, 0(x25)       -> Store 0xAA at address 64 (Byte 0)
+    uut.instruction_memory.ram[35] = 32'h01ac8023;
+
+    // 36: addi x26, x0, 0xBB   -> Load 0xBB into x26
+    uut.instruction_memory.ram[36] = 32'h0bb00d13;
+    // 37: sb x26, 1(x25)       -> Store 0xBB at address 65 (Byte 1)
+    uut.instruction_memory.ram[37] = 32'h01ac80a3;
+
+    // 38: addi x26, x0, 0xCC   -> Load 0xCC into x26
+    uut.instruction_memory.ram[38] = 32'h0cc00d13;
+    // 39: sb x26, 2(x25)       -> Store 0xCC at address 66 (Byte 2)
+    uut.instruction_memory.ram[39] = 32'h01ac8123;
+
+    // 40: addi x26, x0, 0xDD   -> Load 0xDD into x26
+    uut.instruction_memory.ram[40] = 32'h0dd00d13;
+    // 41: sb x26, 3(x25)       -> Store 0xDD at address 67 (Byte 3)
+    uut.instruction_memory.ram[41] = 32'h01ac81a3;
+
+    // Now test the loads!
+    // 42: lw x27, 0(x25)       -> Load Word. Expect x27 = 0xDDCCBBAA
+    uut.instruction_memory.ram[42] = 32'h000cad83;
+
+    // 43: lhu x28, 0(x25)      -> Load Half Unsigned (Bytes 1-0). Expect x28 = 0x0000BBAA
+    uut.instruction_memory.ram[43] = 32'h000cde03;
+
+    // 44: lh x29, 2(x25)       -> Load Half Signed (Bytes 3-2). 0xDDCC is negative! Expect x29 = 0xFFFFDDCC
+    uut.instruction_memory.ram[44] = 32'h002c9e83;
+
+    // 45: lbu x30, 1(x25)      -> Load Byte Unsigned (Byte 1). Expect x30 = 0x000000BB
+    uut.instruction_memory.ram[45] = 32'h001ccf03;
+
+    // 46: lb x31, 3(x25)       -> Load Byte Signed (Byte 3). 0xDD is negative! Expect x31 = 0xFFFFFFDD
+    uut.instruction_memory.ram[46] = 32'h003c8f83;
+
+    // 47: addi x23, x0, 0x5A5  // load 0x05A5 into x23
+    uut.instruction_memory.ram[47] = 32'h5a500b93;
+
+    // 48: sh x23, 2(x25)       // store halfword 0x05A5 at address 66
+    uut.instruction_memory.ram[48] = 32'h017c9123;
+
+    // 49: lw x24, 0(x25)       // load the full word back into x24 to check the damage
+    uut.instruction_memory.ram[49] = 32'h000cac03;
+
+    // 50: jal x0, 0            // infinite loop (park here forever)
+    uut.instruction_memory.ram[50] = 32'h0000006f;
+
+    // adjust the run time to ensure PC reaches index 50
+    #22 reset = 0;
+    #1600;  // bumped up slightly for the extra instructions
+
+    // Adjust the run time to ensure PC reaches index 47
+    #22 reset = 0;
+    #1500;  // INCREASED from 1000 to 1500 to account for the new instructions!
+
     #22 reset = 0;  // de-assert reset away from clock edge
     #1000;  // give it plenty of time
 
@@ -194,6 +251,45 @@ module tb;
     end else begin
       $display("FAIL: jalr function return (x20: %0d, x19: %0d)", uut.registers.registers[20],
                uut.registers.registers[19]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // Test 11: Store Byte and Load Word
+    if (uut.registers.registers[27] == 32'hDDCCBBAA) begin
+      $display("PASS: sb and lw logic (x27: %h)", uut.registers.registers[27]);
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: sb and lw logic (x27: %h, expected DDCCBBAA)", uut.registers.registers[27]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // Test 12: Halfword Loads (Signed vs Unsigned)
+    if (uut.registers.registers[28] == 32'h0000BBAA && uut.registers.registers[29] == 32'hFFFFDDCC) begin
+      $display("PASS: lh and lhu logic");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: lh/lhu logic (x28: %h, x29: %h)", uut.registers.registers[28],
+               uut.registers.registers[29]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // Test 13: Byte Loads (Signed vs Unsigned)
+    if (uut.registers.registers[30] == 32'h000000BB && uut.registers.registers[31] == 32'hFFFFFFDD) begin
+      $display("PASS: lb and lbu logic");
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: lb/lbu logic (x30: %h, x31: %h)", uut.registers.registers[30],
+               uut.registers.registers[31]);
+      tests_failed = tests_failed + 1;
+    end
+
+    // test 14: store halfword (sh)
+    // we expect the top half to be 0x05A5 and the bottom half to still be 0xBBAA
+    if (uut.registers.registers[24] == 32'h05A5BBAA) begin
+      $display("PASS: sh logic (x24: %h)", uut.registers.registers[24]);
+      tests_passed = tests_passed + 1;
+    end else begin
+      $display("FAIL: sh logic (x24: %h, expected 05A5BBAA)", uut.registers.registers[24]);
       tests_failed = tests_failed + 1;
     end
 
