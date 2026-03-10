@@ -17,169 +17,77 @@ module control_unit (
     output reg jalr_flag  // 1 when jalr instruction received
 );
 
+  // -------------------------------------------------------------------------
+  // One-Hot Opcode Decoding
+  // -------------------------------------------------------------------------
+  // we pre-decode opcodes into individual wires to speed up signal generation
+  wire is_r_type = (opcode == 7'b0110011);
+  wire is_i_type = (opcode == 7'b0010011);
+  wire is_load   = (opcode == 7'b0000011);
+  wire is_store  = (opcode == 7'b0100011);
+  wire is_branch = (opcode == 7'b1100011);
+  wire is_jal    = (opcode == 7'b1101111);
+  wire is_jalr   = (opcode == 7'b1100111);
+  wire is_lui    = (opcode == 7'b0110111);
+  wire is_auipc  = (opcode == 7'b0010111);
+
   // determine control signals based on opcode
   always @(*) begin
     // default values to prevent latches
-    reg_we     = 1'b0;
-    alu_ctrl   = 4'b0000;
-    alu_src    = 1'b0;
-    mem_we     = 1'b0;
-    result_src = 2'b00;
-    imm_src    = 3'b000;
-    branch     = 1'b0;
-    jump       = 1'b0;
-    jalr_flag  = 1'b0;
+    reg_we     = is_r_type | is_i_type | is_load | is_jal | is_jalr | is_lui | is_auipc;
+    alu_src    = is_i_type | is_load | is_store | is_jalr | is_lui | is_auipc;
+    mem_we     = is_store;
+    result_src = (is_load)           ? 2'b01 : 
+                 (is_jal | is_jalr)  ? 2'b10 : 
+                 (is_lui | is_auipc) ? 2'b11 : 
+                                       2'b00;
+    
+    // imm_src logic
+    imm_src    = (is_store)          ? 3'b001 : // s-type
+                 (is_branch)         ? 3'b010 : // b-type
+                 (is_jal)            ? 3'b011 : // j-type
+                 (is_lui | is_auipc) ? 3'b100 : // u-type
+                                       3'b000;  // i-type (default)
 
-    case (opcode)
-      // r-type instructions (add, sub, and, or, etc)
-      7'b0110011: begin
-        reg_we  = 1'b1;  // we want to save the math result
-        alu_src = 1'b0;  // route rs2 into the alu's second input
-        imm_src = 3'b000; // doesn't matter for R-type, but keeping it clean
+    branch     = is_branch;
+    jump       = is_jal;
+    jalr_flag  = is_jalr;
 
+    // ALU Control logic
+    if (is_r_type) begin
+      case (funct3)
+        3'b000:  alu_ctrl = (funct7 == 7'b0100000) ? 4'b0001 : 4'b0000; // sub : add
+        3'b001:  alu_ctrl = 4'b0010; // sll
+        3'b010:  alu_ctrl = 4'b0011; // slt
+        3'b011:  alu_ctrl = 4'b1001; // sltu
+        3'b100:  alu_ctrl = 4'b0100; // xor
+        3'b101:  alu_ctrl = (funct7 == 7'b0100000) ? 4'b1000 : 4'b0101; // sra : srl
+        3'b110:  alu_ctrl = 4'b0110; // or
+        3'b111:  alu_ctrl = 4'b0111; // and
+        default: alu_ctrl = 4'b0000;
+      endcase
+    end else if (is_i_type) begin
+      case (funct3)
+        3'b000:  alu_ctrl = 4'b0000; // addi
+        3'b001:  alu_ctrl = 4'b0010; // slli
+        3'b010:  alu_ctrl = 4'b0011; // slti
+        3'b011:  alu_ctrl = 4'b1001; // sltiu
+        3'b100:  alu_ctrl = 4'b0100; // xori
+        3'b101:  alu_ctrl = (funct7 == 7'b0100000) ? 4'b1000 : 4'b0101; // srai : srli
+        3'b110:  alu_ctrl = 4'b0110; // ori
+        3'b111:  alu_ctrl = 4'b0111; // andi
+        default: alu_ctrl = 4'b0000;
+      endcase
+    end else if (is_branch) begin
         case (funct3)
-          3'b000: begin
-            if (funct7 == 7'b0100000) begin
-              alu_ctrl = 4'b0001;  // sub
-            end else begin
-              alu_ctrl = 4'b0000;  // add
-            end
-          end
-          3'b001:  alu_ctrl = 4'b0010;  // sll
-          3'b010:  alu_ctrl = 4'b0011;  // slt
-          3'b011:  alu_ctrl = 4'b1001;  // sltu
-          3'b100:  alu_ctrl = 4'b0100;  // xor
-          3'b101: begin
-            if (funct7 == 7'b0100000) begin
-              alu_ctrl = 4'b1000;  // sra
-            end else begin
-              alu_ctrl = 4'b0101;  // srl
-            end
-          end
-          3'b110:  alu_ctrl = 4'b0110;  // or
-          3'b111:  alu_ctrl = 4'b0111;  // and
-          default: alu_ctrl = 4'b0000;
-        endcase
-      end
-
-      // i-type instructions (addi, slli, ori, etc)
-      7'b0010011: begin
-        reg_we  = 1'b1;  // we want to save the math result
-        alu_src = 1'b1;  // route imm_val into the alu's second input
-        imm_src = 3'b000; // I-type immediate
-
-        case (funct3)
-          3'b000:  alu_ctrl = 4'b0000;  // addi
-          3'b001:  alu_ctrl = 4'b0010;  // slli
-          3'b010:  alu_ctrl = 4'b0011;  // slti
-          3'b011:  alu_ctrl = 4'b1001;  // sltiu
-          3'b100:  alu_ctrl = 4'b0100;  // xori
-          3'b101: begin
-            if (funct7 == 7'b0100000) begin
-              alu_ctrl = 4'b1000;  // srai
-            end else begin
-              alu_ctrl = 4'b0101;  // srli
-            end
-          end
-          3'b110:  alu_ctrl = 4'b0110;  // ori
-          3'b111:  alu_ctrl = 4'b0111;  // andi
-          default: alu_ctrl = 4'b0000;
-        endcase
-      end
-
-      // load instructions (lw)
-      7'b0000011: begin
-        reg_we     = 1'b1;  // saving data from memory into a register
-        alu_src    = 1'b1;  // add the immediate offset to the base address
-        alu_ctrl   = 4'b0000;  // standard addition
-        mem_we     = 1'b0;  // reading from memory, not writing
-        result_src = 2'b01;  // route memory data to register file instead of alu result
-        imm_src    = 3'b000; // I-type immediate
-      end
-
-      // store instructions (sw)
-      7'b0100011: begin
-        reg_we     = 1'b0;  // not saving to a register
-        alu_src    = 1'b1;  // add the immediate offset to the base address
-        alu_ctrl   = 4'b0000;  // standard addition
-        mem_we     = 1'b1;  // write to memory!
-        result_src = 1'b0;  // doesn't matter, reg_we is 0
-        imm_src    = 3'b001; // S-type immediate
-      end
-
-      // branch instructions
-      7'b1100011: begin
-        reg_we  = 1'b0;
-        alu_src = 1'b0;  // compare two registers
-        mem_we  = 1'b0;
-        branch  = 1'b1;  // flag as a branch
-        imm_src = 3'b010; // B-type immediate
-
-        case (funct3)
-          3'b000, 3'b001: alu_ctrl = 4'b0001;  // beq, bne -> subtract to get zero flag
-          3'b100, 3'b101: alu_ctrl = 4'b0011;  // blt, bge -> signed comparison for lt flag
-          3'b110, 3'b111: alu_ctrl = 4'b1001;  // bltu, bgeu -> unsigned comparison for lt flag
+          3'b000, 3'b001: alu_ctrl = 4'b0001; // beq, bne -> subtract to get zero flag
+          3'b100, 3'b101: alu_ctrl = 4'b0011; // blt, bge -> signed comparison for lt flag
+          3'b110, 3'b111: alu_ctrl = 4'b1001; // bltu, bgeu -> unsigned comparison for lt flag
           default:        alu_ctrl = 4'b0001;
         endcase
-      end
-
-      // jump instruction (jal)
-      7'b1101111: begin
-        reg_we     = 1'b1;  // save return address
-        alu_src    = 1'b0;
-        alu_ctrl   = 4'b0000;
-        mem_we     = 1'b0;
-        result_src = 2'b10;  // flag to select PC + 4
-        imm_src    = 3'b011; // J-type immediate
-        branch     = 1'b0;
-        jump       = 1'b1;  // flag as a jal
-      end
-
-      // jump and link register (jalr)
-      7'b1100111: begin
-        reg_we     = 1'b1;  // save return address (PC + 4)
-        alu_src    = 1'b1;  // route immediate into ALU
-        alu_ctrl   = 4'b0000;  // ALU does addition (rs1 + imm)
-        mem_we     = 1'b0;
-        result_src = 2'b10;  // flag to select PC + 4 for the register file
-        imm_src    = 3'b000; // jalr uses I-type immediate
-        branch     = 1'b0;
-        jump       = 1'b0;  // handled by jalr_flag instead
-        jalr_flag  = 1'b1;  // flag as a jalr
-      end
-
-      // load upper immediate (lui)
-      7'b0110111: begin
-        reg_we     = 1'b1;
-        alu_src    = 1'b1;  // route imm into ALU
-        alu_ctrl   = 4'b0000;  // add so it does 0 + Imm
-        mem_we     = 1'b0;
-        result_src = 2'b11;  // flag to select special upper_imm logic
-        imm_src    = 3'b100; // U-type immediate
-      end
-
-      // add upper immediate to pc (auipc)
-      7'b0010111: begin
-        reg_we     = 1'b1;
-        alu_src    = 1'b1;
-        alu_ctrl   = 4'b0000;  // addition
-        mem_we     = 1'b0;
-        result_src = 2'b11;  // same mux path as lui, but logic will include PC
-        imm_src    = 3'b100; // U-type immediate
-      end
-
-      default: begin
-        reg_we     = 1'b0;
-        alu_ctrl   = 4'b0000;
-        alu_src    = 1'b0;
-        mem_we     = 1'b0;
-        result_src = 1'b0;
-        imm_src    = 3'b000;
-        branch     = 1'b0;
-        jump       = 1'b0;
-        jalr_flag  = 1'b0;
-      end
-    endcase
+    end else begin
+      alu_ctrl = 4'b0000; // default to add for loads, stores, jumps, and auipc/lui
+    end
   end
 
 endmodule
