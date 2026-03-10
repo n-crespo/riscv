@@ -1,5 +1,3 @@
-# hardware/Makefile
-
 # project configuration
 TOP_MODULE = top
 PROJECT_NAME = riscv_uart_test
@@ -14,10 +12,13 @@ VIVADO_PATH ?= C:/AMDDesignTools/2025.2/Vivado/bin/vivado.bat
 VIVADO_CMD = "$(VIVADO_PATH)" -mode batch -notrace
 VIVADO_BIN = $(dir $(VIVADO_PATH))
 
+# riscv toolchain prefix
+RV_PREFIX ?= riscv64-unknown-elf-
+
 # set default args to just open the project
 GUI_ARGS = $(BUILD_DIR)/$(PROJECT_NAME).xpr
 
-.PHONY: all project bitstream program gui sim clean
+.PHONY: all project bitstream program gui sim asm clean
 
 all: project bitstream
 
@@ -25,11 +26,15 @@ project:
 	@echo [INFO] Creating Project: $(PROJECT_NAME) -- Top: $(TOP_MODULE)
 	$(VIVADO_CMD) -source $(TCL_DIR)/create_project.tcl -tclargs $(PROJECT_NAME) $(TOP_MODULE) $(BUILD_DIR) $(SRC_DIR) $(SIM_DIR)
 
-# sim:
-# 	@echo [INFO] Running Simulation: $(TB_MODULE)
-# 	$(VIVADO_CMD) -source $(TCL_DIR)/simulate.tcl -tclargs $(PROJECT_NAME) $(BUILD_DIR) $(TB_MODULE)
+# compile assembly to hex
+asm: $(SIM_DIR)/tb.hex
 
-sim:
+$(SIM_DIR)/tb.hex: $(SIM_DIR)/tb.s
+	@echo [INFO] Assembling RISC-V code...
+	$(RV_PREFIX)as -march=rv32i -mabi=ilp32 $< -o $(SIM_DIR)/tb.o
+	$(RV_PREFIX)objcopy -O verilog --verilog-data-width=4 $(SIM_DIR)/tb.o $@
+
+sim: asm
 	@echo [INFO] Compiling Verilog...
 	"$(VIVADO_BIN)xvlog" $(SRC_DIR)/*.v $(SIM_DIR)/*.v
 	@echo [INFO] Elaborating...
@@ -49,4 +54,4 @@ gui:
 	"$(VIVADO_PATH)" -mode gui $(GUI_ARGS) &
 
 clean:
-	rm -rf $(BUILD_DIR) .Xil *.log *.jou *.pb xsim.dir
+	rm -rf $(BUILD_DIR) .Xil *.log *.jou *.pb xsim.dir $(SIM_DIR)/*.o $(SIM_DIR)/*.hex
