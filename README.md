@@ -47,6 +47,10 @@ graph TD
 
 ```
 
+A simplified diagram outlining the individual components is also available.
+
+![Architecture Diagram](./docs/lab4.png)
+
 ## Key Features
 
 - **2-Stage Pipeline**: Decouples instruction fetching from execution, allowing processor to utilize high-speed Synchronous BRAM.
