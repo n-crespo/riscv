@@ -199,155 +199,54 @@ module tb;
 
     $display("--- SIMULATION RESULTS ---");
 
-    // Existing Tests
-    if (uut.registers.registers[3] == 12) begin
-      $display("PASS: math logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: math logic");
-      tests_failed = tests_failed + 1;
-    end
+    // basic logic & memory
+    check_test(uut.registers.registers[3], 12, "math logic");
+    check_test(uut.registers.registers[4], 12, "memory logic");
+    check_test(uut.registers.registers[0], 0, "x0 hard-wired to zero");
+    check_test(uut.registers.registers[9], 32'hfffffff6, "sign extension");
+    check_test(uut.registers.registers[10], 42, "branch-not-taken");
 
-    if (uut.registers.registers[4] == 12) begin
-      $display("PASS: memory logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: memory logic");
-      tests_failed = tests_failed + 1;
-    end
+    // dependencies & safety
+    check_test(uut.registers.registers[12], 15, "RAW data dependency");
+    check_test(uut.registers.registers[13], 15, "memory throughput");
+    check_test({uut.registers.registers[14], uut.registers.registers[0]}, {32'd1, 32'd0},
+               "invalid opcode safety");
 
-    // Test register x0 hard-wiring
-    if (uut.registers.registers[0] == 0) begin
-      $display("PASS: x0 hard-wired to zero");
-      tests_passed = tests_passed + 1;
-    end
-    if (uut.registers.registers[9] == 32'hfffffff6) begin
-      $display("PASS: sign extension");
-      tests_passed = tests_passed + 1;
-    end
-    if (uut.registers.registers[10] == 42) begin
-      $display("PASS: branch-not-taken");
-      tests_passed = tests_passed + 1;
-    end
+    // accelerator & function calls
+    check_test(uut.registers.registers[18], 32'h00FFFFFF, "pixel accelerator");
+    check_test({uut.registers.registers[20], uut.registers.registers[19]}, {32'd42, 32'd99},
+               "jalr function return");
 
-    // Test 6: RAW Dependency
-    if (uut.registers.registers[12] == 15) begin
-      $display("PASS: RAW data dependency (x12 == 15)");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: RAW data dependency (x12: %0d, expected 15)", uut.registers.registers[12]);
-      tests_failed = tests_failed + 1;
-    end
+    // sub-word memory access
+    check_test(uut.registers.registers[27], 32'hDDCCBBAA, "sb and lw logic");
+    check_test({uut.registers.registers[28], uut.registers.registers[29]}, {
+               32'h0000BBAA, 32'hFFFFDDCC}, "lh/lhu logic");
+    check_test({uut.registers.registers[30], uut.registers.registers[31]}, {
+               32'h000000BB, 32'hFFFFFFDD}, "lb/lbu logic");
+    check_test(uut.registers.registers[24], 32'h05A5BBAA, "sh logic");
 
-    // Test 7: Memory Throughput
-    if (uut.registers.registers[13] == 15) begin
-      $display("PASS: memory throughput (sw/lw sequence)");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: memory throughput (x13: %0d, expected 15)", uut.registers.registers[13]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // Test 8: Invalid Opcode Safety
-    // We check if the instruction after the invalid one (addi x14, x0, 1) executed.
-    // If x14 is 1, the CPU didn't hang. We also verify x0 is still 0.
-    if (uut.registers.registers[14] == 1 && uut.registers.registers[0] == 0) begin
-      $display("PASS: invalid opcode safety (CPU continued, no illegal writes)");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: invalid opcode caused hang or corruption");
-      tests_failed = tests_failed + 1;
-    end
-
-    if (uut.registers.registers[18] == 32'h00FFFFFF) begin
-      $display("PASS: pixel accelerator (result is white)");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: pixel accelerator (x18: %h, expected 00FFFFFF)", uut.registers.registers[18]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // Test 10: Function Call and Return (jalr)
-    // We expect x20 == 42 (function executed) AND x19 == 99 (returned successfully)
-    if (uut.registers.registers[20] == 42 && uut.registers.registers[19] == 99) begin
-      $display("PASS: jalr function return");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: jalr function return (x20: %0d, x19: %0d)", uut.registers.registers[20],
-               uut.registers.registers[19]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // Test 11: Store Byte and Load Word
-    if (uut.registers.registers[27] == 32'hDDCCBBAA) begin
-      $display("PASS: sb and lw logic (x27: %h)", uut.registers.registers[27]);
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: sb and lw logic (x27: %h, expected DDCCBBAA)", uut.registers.registers[27]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // Test 12: Halfword Loads (Signed vs Unsigned)
-    if (uut.registers.registers[28] == 32'h0000BBAA && uut.registers.registers[29] == 32'hFFFFDDCC) begin
-      $display("PASS: lh and lhu logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: lh/lhu logic (x28: %h, x29: %h)", uut.registers.registers[28],
-               uut.registers.registers[29]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // Test 13: Byte Loads (Signed vs Unsigned)
-    if (uut.registers.registers[30] == 32'h000000BB && uut.registers.registers[31] == 32'hFFFFFFDD) begin
-      $display("PASS: lb and lbu logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: lb/lbu logic (x30: %h, x31: %h)", uut.registers.registers[30],
-               uut.registers.registers[31]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // test 14: store halfword (sh)
-    // we expect the top half to be 0x05A5 and the bottom half to still be 0xBBAA
-    if (uut.registers.registers[24] == 32'h05A5BBAA) begin
-      $display("PASS: sh logic (x24: %h)", uut.registers.registers[24]);
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: sh logic (x24: %h, expected 05A5BBAA)", uut.registers.registers[24]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // test 15: bne (branch not equal)
-    if (uut.registers.registers[5] == 1) begin
-      $display("PASS: bne logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: bne logic (x5: %0d)", uut.registers.registers[5]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // test 16: blt (branch less than)
-    if (uut.registers.registers[6] == 1) begin
-      $display("PASS: blt logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: blt logic (x6: %0d)", uut.registers.registers[6]);
-      tests_failed = tests_failed + 1;
-    end
-
-    // test 17: bge (branch greater than or equal)
-    if (uut.registers.registers[7] == 1) begin
-      $display("PASS: bge logic");
-      tests_passed = tests_passed + 1;
-    end else begin
-      $display("FAIL: bge logic (x7: %0d)", uut.registers.registers[7]);
-      tests_failed = tests_failed + 1;
-    end
+    // branch comparator
+    check_test(uut.registers.registers[5], 1, "bne logic");
+    check_test(uut.registers.registers[6], 1, "blt logic");
+    check_test(uut.registers.registers[7], 1, "bge logic");
 
     $display("--------------------------");
-    $display("TOTAL SUMMARY: %0d PASSED, %0d FAILED", tests_passed, tests_failed);
+    $display("SUMMARY: %0d PASSED, %0d FAILED", tests_passed, tests_failed);
     $display("--------------------------");
     $finish;
   end
+
+  // task to automate the pass/fail boilerplate
+  task check_test(input [31:0] actual, input [31:0] expected, input [127:0] test_name);
+    begin
+      if (actual === expected) begin
+        $display("PASS: %s", test_name);
+        tests_passed = tests_passed + 1;
+      end else begin
+        $display("FAIL: %s (Actual: %h, Expected: %h)", test_name, actual, expected);
+        tests_failed = tests_failed + 1;
+      end
+    end
+  endtask
 
 endmodule
