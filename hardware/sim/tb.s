@@ -29,7 +29,7 @@
 	addi  x14, x0, 1; x14 = 1 (this should execute despite invalid opcode above)
 
 	; ---------------------------------------------------------
-	; --- PIXEL ACCELERATOR (uses Memory Mapped I/O (MIMO)) ---
+	; --- Pixel Accelerator (uses Memory Mapped I/O (MIMO)) ---
 	; ---------------------------------------------------------
 
 	addi x15, x0, 128; x15 = 128 = 0x80 (base address 0x80)
@@ -66,47 +66,55 @@
 	addi x20, x0, 42; jump lands here: (function body) x20 = 42
 	jalr x0, 0(x1); return!
 
-	;    sub-word memory access tests
-	addi x25, x0, 64; base address 64
-	addi x26, x0, 0AA; load 0xAA
-	sb   x26, 0(x25)
-	addi x26, x0, 0xBB; load 0xBB
-	sb   x26, 1(x25)
-	addi x26, x0, 0xCC; load 0xCC
-	sb   x26, 2(x25)
-	addi x26, x0, 0xDD; load 0xDD
-	sb   x26, 3(x25)
+	; ------------------------------
+	; --- Sub Word Memory Access ---
+	; ------------------------------
+
+	;    store tests (source, destination)
+	addi x25, x0, 64; x25 = 64 (Base Address)
+	addi x26, x0, 0xAA; x26 = 170
+	sb   x26, 0(x25); first byte of x26 -> byte 0 of mem[x25]
+	addi x26, x0, 0xBB; x26 = 187
+	sb   x26, 1(x25); first byte of x26 -> byte 1 of mem[x25]
+	addi x26, x0, 0xCC; x26 = 204
+	sb   x26, 2(x25); first byte of x26 -> byte 2 of mem[x25]
+	addi x26, x0, 0xDD; x26 = 221
+	sb   x26, 3(x25); first byte of x26 -> byte 3 of mem[x25]
 
 	;   load tests
-	lw  x27, 0(x25)
-	lhu x28, 0(x25)
-	lh  x29, 2(x25)
-	lbu x30, 1(x25)
-	lb  x31, 3(x25)
+	lw  x27, 0(x25); x27 <- bytes 0, 1, 2, 3 of mem[x25] (full word)
+	lhu x28, 0(x25); x28 <- bytes 0, 1 of mem[x25] (unsigned half)
+	lh  x29, 2(x25); x29 <- bytes 2, 3 of mem[x25] (signed half)
+	lbu x30, 1(x25); x30 <- byte 1 of mem[x25] (unsigned byte)
+	lb  x31, 3(x25); x31 <- byte 3 of mem[x25] (signed byte)
 
 	;    store halfword test
-	addi x23, x0, 0x5A5
-	sh   x23, 2(x25)
-	lw   x24, 0(x25)
+	addi x23, x0, 0x5A5; x23 = 1, 445
+	sh   x23, 2(x25); first 2 bytes of x23 -> bytes 2 & 3 of mem[x25]
+	lw   x24, 0(x25); x24 <- bytes 0, 1, 2, 3 of mem[x25]
+
+	; -------------------------
+	; --- Branch Comparator ---
+	; -------------------------
 
 	;    branch comparator setup
-	addi x21, x0, 10
-	addi x22, x0, -5
+	addi x21, x0, 10; x21 <- 10
+	addi x22, x0, -5; x22 <- -5
 
 	;    test bne (10 != -5)
-	addi x5, x0, 0; initialize flag
-	bne  x21, x22, 8; jump if true
+	addi x5, x0, 0; x5 = 0 (initialize flag)
+	bne  x21, x22, 8; jump 2 instructions down if (10 != -5)
 	jal  x0, 8; skip success
-	addi x5, x0, 1; success
+	addi x5, x0, 1; x5 = 1 (success)
 
 	;    test blt (-5 < 10)
-	addi x6, x0, 0; initialize flag
-	blt  x22, x21, 8; jump if true
+	addi x6, x0, 0; x6 = 0 (initialize flag)
+	blt  x22, x21, 8; jump 2 instructions down if (-5 < 10)
 	jal  x0, 8; skip success
-	addi x6, x0, 1; success
+	addi x6, x0, 1; x6 = 1 (success)
 
 	;    test bge (10 >= -5)
-	addi x7, x0, 0; initialize flag
-	bge  x21, x22, 8; jump if true
+	addi x7, x0, 0; x7 = 0 (initialize flag)
+	bge  x21, x22, 8; jump 2 instructions down if (-10 > -5)
 	jal  x0, 8; skip success
-	addi x7, x0, 1; success
+	addi x7, x0, 1; x7 = 1 (success)
