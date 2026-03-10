@@ -103,13 +103,17 @@ module control_unit (
 
       // branch instructions
       7'b1100011: begin
-        reg_we     = 1'b0;
-        alu_src    = 1'b0;  // compare two registers
-        alu_ctrl   = 4'b0001;  // subtract
-        mem_we     = 1'b0;
-        result_src = 1'b0;
-        branch     = 1'b1;  // flag as a branch
-        jump       = 1'b0;
+        reg_we  = 1'b0;
+        alu_src = 1'b0;  // compare two registers
+        mem_we  = 1'b0;
+        branch  = 1'b1;
+
+        case (funct3)
+          3'b000, 3'b001: alu_ctrl = 4'b0001;  // beq, bne -> subtract to get zero flag
+          3'b100, 3'b101: alu_ctrl = 4'b0011;  // blt, bge -> signed comparison for lt flag
+          3'b110, 3'b111: alu_ctrl = 4'b1001;  // bltu, bgeu -> unsigned comparison for lt flag
+          default:        alu_ctrl = 4'b0001;
+        endcase
       end
 
       // jump instruction (jal)

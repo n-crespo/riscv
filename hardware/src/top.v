@@ -44,7 +44,8 @@ module top (
   wire [31:0] reg_rd1, reg_rd2, reg_wd;
   wire [31:0] alu_a_in, alu_b_in, alu_result;
   wire alu_zero;
-  wire branch_condition_met;
+  wire alu_lt;
+  reg  branch_condition_met;
 
   // memory & accelerator signals
   wire [31:0] data_rd, final_data_rd, accel_dout;
@@ -134,19 +135,12 @@ module top (
   );
 
   alu main_alu (
-      .a(alu_a_in),
-      .b(alu_b_in),
+      .a       (alu_a_in),
+      .b       (alu_b_in),
       .alu_ctrl(alu_ctrl),
-      .out(alu_result),
-      .zero(alu_zero)
-  );
-
-  branch_comparator branch_comp (
-      .branch(branch),
-      .funct3(funct3),
-      .rs1_data(reg_rd1),
-      .rs2_data(reg_rd2),
-      .take(branch_condition_met)
+      .out     (alu_result),
+      .zero    (alu_zero),
+      .lt      (alu_lt)
   );
 
   // -------------------------------------------------------------------------
@@ -167,6 +161,23 @@ module top (
   assign ram_we_wire   = data_mem_we & !is_accel_addr;
   assign accel_we_wire = data_mem_we & is_accel_addr;
   assign final_data_rd = is_accel_addr ? accel_dout : data_rd;
+
+  // determine branch condition using ALU flags
+  always @(*) begin
+    if (branch) begin
+      case (funct3)
+        3'b000:  branch_condition_met = alu_zero;  // beq: rs1 == rs2
+        3'b001:  branch_condition_met = !alu_zero;  // bne: rs1 != rs2
+        3'b100:  branch_condition_met = alu_lt;  // blt: rs1 < rs2 (signed)
+        3'b101:  branch_condition_met = !alu_lt;  // bge: rs1 >= rs2 (signed)
+        3'b110:  branch_condition_met = alu_lt;  // bltu: rs1 < rs2 (unsigned)
+        3'b111:  branch_condition_met = !alu_lt;  // bgeu: rs1 >= rs2 (unsigned)
+        default: branch_condition_met = 1'b0;
+      endcase
+    end else begin
+      branch_condition_met = 1'b0;
+    end
+  end
 
   data_mem ram_blocks (
       .clk(clk),
