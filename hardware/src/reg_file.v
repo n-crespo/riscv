@@ -8,17 +8,17 @@ module reg_file (
     input  [ 4:0] rd,   // WRITE: address of destination register
     input  [31:0] wd,   // WRITE: the data to write
     output [31:0] rd1,  // READ output: read data 1
-    output [31:0] rd2   // READ output:read data 2
+    output [31:0] rd2   // READ output: read data 2
 );
 
   // 32 registers, each 32 bits wide
   reg [31:0] registers[0:31];
 
-  // if we are writing to the same register we are reading from, pass the 'wd'
-  // directly to the output. prevents a 1-cycle delay.
-  assign rd1 = (rs1 == 5'b0) ? 32'b0 : ((we && (rs1 == rd)) ? wd : registers[rs1]);
-
-  assign rd2 = (rs2 == 5'b0) ? 32'b0 : ((we && (rs2 == rd)) ? wd : registers[rs2]);
+  // simplified asynchronous read
+  // in a 2-stage pipeline, the next instruction won't try to read
+  // this value until the NEXT clock cycle anyway.
+  assign rd1 = (rs1 == 5'b0) ? 32'b0 : registers[rs1];
+  assign rd2 = (rs2 == 5'b0) ? 32'b0 : registers[rs2];
 
   integer i;
   initial begin

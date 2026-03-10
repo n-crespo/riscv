@@ -54,25 +54,23 @@ module top (
 
 
   // -------------------------------------------------------------------------
-  // PIPELINE BRIDGE (Logic-only)
+  // pipeline bridge (logic-only)
   // -------------------------------------------------------------------------
 
-  // we need to know if the instruction currently coming out of memory is valid
   reg flush_reg;
+
   always @(posedge clk) begin
-    if (reset) flush_reg <= 1'b1;  // start with a flush on reset
-    else flush_reg <= take_jump;  // if we jump now, the NEXT instruction is invalid
+    if (reset) begin
+      flush_reg <= 1'b1;  // start with a flush to ignore the first garbage cycle
+      pc_ex     <= 32'h0;
+    end else begin
+      flush_reg <= take_jump;  // if we jump now, the NEXT cycle is a NOP
+      pc_ex     <= pc_if;  // pc_if is the address of the instr_raw coming out NOW
+    end
   end
 
-  // if flushed, treat the instruction as a NOP
+  // logic-only instruction wire
   assign instr_ex = (flush_reg) ? 32'h00000013 : instr_raw;
-
-  // pc_ex remains a register to hold the 'history' of the instruction on the wire
-  always @(posedge clk) begin
-    if (reset) pc_ex <= 32'h0;
-    else pc_ex <= pc_if;
-  end
-
 
   // -------------------------------------------------------------------------
   // STAGE 2: EXECUTE (EX)
