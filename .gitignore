@@ -2,6 +2,7 @@
 *.elf
 *.o
 *.hex
+*.vvp
 __pycache__/
 
 # --- vivado ignore ---
