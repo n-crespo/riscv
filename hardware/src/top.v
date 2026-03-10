@@ -19,7 +19,15 @@ module top (
 
   // instruction fetch signals
   wire [31:0] pc_wire, fetched_instruction, target_pc, next_pc, pc_plus_4;
-  wire       take_jump;
+  wire take_jump;
+
+  // directly decode the instruction
+  assign opcode = fetched_instruction[6:0];
+  assign rd     = fetched_instruction[11:7];
+  assign funct3 = fetched_instruction[14:12];
+  assign rs1    = fetched_instruction[19:15];
+  assign rs2    = fetched_instruction[24:20];
+  assign funct7 = fetched_instruction[31:25];
 
   // decoder & immediate signals
   wire [6:0] opcode;
@@ -73,16 +81,6 @@ module top (
       .din_a(instruction_reg),
       .addr_b(pc_wire),
       .dout_b(fetched_instruction)
-  );
-
-  decoder instr_decoder (
-      .instr(fetched_instruction),
-      .opcode(opcode),
-      .rd(rd),
-      .funct3(funct3),
-      .rs1(rs1),
-      .rs2(rs2),
-      .funct7(funct7)
   );
 
   imm_gen immediate_generator (
