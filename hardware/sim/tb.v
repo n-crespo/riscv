@@ -43,9 +43,8 @@ module tb;
     // --- Logic Paths (0-13) ---
     $readmemh("sim/tb.hex", uut.instruction_memory.ram);
 
-    // adjust the run time to ensure PC reaches the final index
-    #22 reset = 0;
-    #590;
+    #22 reset = 0;  // wait for initial state to stabilize
+    #590;  // wait for program to finish + pc to reach the end of instructions
 
     $display("--- SIMULATION RESULTS ---");
 
