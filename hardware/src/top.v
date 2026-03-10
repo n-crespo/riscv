@@ -178,12 +178,15 @@ module top (
     endcase
   end
 
+  wire [31:0] diff_bits = reg_rd1 ^ reg_rd2;
+  wire        fast_zero = (diff_bits == 32'b0);
+
   // determine branch condition using ALU flags
   always @(*) begin
     if (branch) begin
       case (funct3)
-        3'b000:  branch_condition_met = alu_zero;  // beq: rs1 == rs2
-        3'b001:  branch_condition_met = !alu_zero;  // bne: rs1 != rs2
+        3'b000:  branch_condition_met = fast_zero;  // beq: rs1 == rs2
+        3'b001:  branch_condition_met = !fast_zero;  // bne: rs1 != rs2
         3'b100:  branch_condition_met = alu_lt;  // blt: rs1 < rs2 (signed)
         3'b101:  branch_condition_met = !alu_lt;  // bge: rs1 >= rs2 (signed)
         3'b110:  branch_condition_met = alu_lt;  // bltu: rs1 < rs2 (unsigned)
