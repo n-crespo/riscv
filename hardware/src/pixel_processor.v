@@ -1,3 +1,4 @@
+// Processes pixel values with MIMO. Expects 4 bytes: [Alpha][Red][Green][Blue].
 module pixel_processor (
     input         clk,
     input         reset,
@@ -68,11 +69,12 @@ module pixel_processor (
       .accum(blue_res)
   );
 
+  // GRAYSCALING (sum and divide by 256 --> single brightness value)
   // force 32-bit addition to prevent overflow before the shift
   // red_res, green_res, and blue_res are already 32-bit wires
   assign gray_final = (red_res + green_res + blue_res) >> 8;
 
-  // thresholding logic
+  // thresholding logic (binarization, like relu function)
   assign bw_final = (gray_final > threshold_reg) ? 8'hFF : 8'h00;
 
   // pack result back into a 32-bit word
