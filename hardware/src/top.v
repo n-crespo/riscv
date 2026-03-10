@@ -18,22 +18,75 @@ module top (
   wire        mem_we;
 
   // instruction fetch signals
-  wire [31:0] pc_wire, fetched_instruction, target_pc, next_pc, pc_plus_4;
-  wire take_jump;
+  wire [31:0] pc_next, pc_plus_4_if, pc_target;
+  wire [31:0] pc_if;  // PC in Fetch stage
+  reg  [31:0] pc_ex;  // PC in Execute stage
+  wire [31:0] instr_raw;  // raw data from memory
+  wire [31:0] instr_ex;  // instruction currently executing
+  wire        take_jump;  // branch decision
 
-  // directly decode the instruction
-  assign opcode = fetched_instruction[6:0];
-  assign rd     = fetched_instruction[11:7];
-  assign funct3 = fetched_instruction[14:12];
-  assign rs1    = fetched_instruction[19:15];
-  assign rs2    = fetched_instruction[24:20];
-  assign funct7 = fetched_instruction[31:25];
+  // -------------------------------------------------------------------------
+  // STAGE 1: FETCH (IF)
+  // -------------------------------------------------------------------------
 
-  // decoder & immediate signals
-  wire [6:0] opcode;
-  wire [4:0] rd, rs1, rs2;
-  wire [ 2:0] funct3;
-  wire [ 6:0] funct7;
+  // Branch/Jump Target: Must use pc_ex (the address of the currently executing instruction)
+  assign pc_target    = jalr_flag ? alu_result : (pc_ex + imm_val);
+
+  // Next PC logic: choose between following the program or jumping
+  assign pc_plus_4_if = pc_if + 32'd4;
+  assign pc_next      = take_jump ? pc_target : pc_plus_4_if;
+
+  pc program_counter (
+      .clk(clk),
+      .reset(reset),
+      .d(pc_next),
+      .q(pc_if)
+  );
+
+  instr_mem instruction_memory (
+      .clk(clk),
+      .we(mem_we),
+      .addr_a(write_addr),
+      .din_a(instruction_reg),
+      .addr_b(pc_if),
+      .dout_b(instr_raw)
+  );
+
+
+  // -------------------------------------------------------------------------
+  // PIPELINE BRIDGE (Logic-only)
+  // -------------------------------------------------------------------------
+
+  // we need to know if the instruction currently coming out of memory is valid
+  reg flush_reg;
+  always @(posedge clk) begin
+    if (reset) flush_reg <= 1'b1;  // start with a flush on reset
+    else flush_reg <= take_jump;  // if we jump now, the NEXT instruction is invalid
+  end
+
+  // if flushed, treat the instruction as a NOP
+  assign instr_ex = (flush_reg) ? 32'h00000013 : instr_raw;
+
+  // pc_ex remains a register to hold the 'history' of the instruction on the wire
+  always @(posedge clk) begin
+    if (reset) pc_ex <= 32'h0;
+    else pc_ex <= pc_if;
+  end
+
+
+  // -------------------------------------------------------------------------
+  // STAGE 2: EXECUTE (EX)
+  // -------------------------------------------------------------------------
+
+  // directly decode the instruction from the EX register
+  wire [ 6:0] opcode = instr_ex[6:0];
+  wire [ 4:0] rd = instr_ex[11:7];
+  wire [ 2:0] funct3 = instr_ex[14:12];
+  wire [ 4:0] rs1 = instr_ex[19:15];
+  wire [ 4:0] rs2 = instr_ex[24:20];
+  wire [ 6:0] funct7 = instr_ex[31:25];
+
+  // immediate signals
   wire [31:0] imm_val;
   wire [ 2:0] imm_src;
 
@@ -67,24 +120,8 @@ module top (
       .rx_byte(rx_byte)
   );
 
-  pc program_counter (
-      .clk  (clk),
-      .reset(reset),
-      .d    (next_pc),  // feed the winner of the MUX
-      .q    (pc_wire)
-  );
-
-  instr_mem instruction_memory (
-      .clk(clk),
-      .we(mem_we),
-      .addr_a(write_addr),
-      .din_a(instruction_reg),
-      .addr_b(pc_wire),
-      .dout_b(fetched_instruction)
-  );
-
   imm_gen immediate_generator (
-      .instr  (fetched_instruction),
+      .instr  (instr_ex),
       .imm_src(imm_src),
       .imm_out(imm_val)
   );
@@ -120,7 +157,7 @@ module top (
   );
 
   // ALU Mux A: selects between rs1, PC (AUIPC), or 0 (LUI)
-  assign alu_a_in = (opcode == 7'b0010111) ? pc_wire : (opcode == 7'b0110111) ? 32'b0 : reg_rd1;
+  assign alu_a_in = (opcode == 7'b0010111) ? pc_ex : (opcode == 7'b0110111) ? 32'b0 : reg_rd1;
 
   // ALU Mux B: selects between rs2 and immediate
   mux2 alu_mux (
@@ -143,15 +180,7 @@ module top (
   // Memory, Writeback & Control Flow
   // -------------------------------------------------------------------------
 
-  // pc logic
-  // jal/branch: pc + (immediate)
-  // jalr: use the exact address calculated by ALU (rs1 + imm)
-  assign target_pc = jalr_flag ? alu_result : (pc_wire + imm_val);
-
-  // next pc logic
-  assign pc_plus_4 = pc_wire + 32'd4;
   assign take_jump = jump | jalr_flag | branch_condition_met;
-  assign next_pc = take_jump ? target_pc : pc_plus_4;
 
   // memory & MIMO logic
   assign is_accel_addr = alu_result[7];
@@ -239,8 +268,8 @@ module top (
   );
 
   // final writeback mux
-  assign reg_wd = (result_src == 2'b11) ? alu_result    :
-                  (result_src == 2'b10) ? pc_plus_4     :
+  assign reg_wd = (result_src == 2'b11) ? alu_result :
+                  (result_src == 2'b10) ? (pc_ex + 32'd4) :
                   (result_src == 2'b01) ? final_data_rd :
                                           alu_result;
 

@@ -1,4 +1,6 @@
 `timescale 1ns / 1ps
+// TODO: migrate to synchronous BRAM. will require adding 3rd pipeline stage so
+// that CPU stalls and waits for data to arrive in the next cycle
 
 module data_mem (
     input clk,
