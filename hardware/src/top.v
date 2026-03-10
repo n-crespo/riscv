@@ -21,6 +21,8 @@ module top (
   wire [31:0] pc_wire;
   wire [31:0] fetched_instruction;
   wire [31:0] target_pc;
+  wire [31:0] next_pc;
+  wire [31:0] pc_plus_4;
   wire        take_jump;
 
   // decoder & immediate signals
@@ -62,11 +64,10 @@ module top (
   );
 
   pc program_counter (
-      .clk(clk),
+      .clk  (clk),
       .reset(reset),
-      .take_jump(take_jump),
-      .target_pc(target_pc),
-      .pc_out(pc_wire)
+      .d    (next_pc),  // feed the winner of the MUX
+      .q    (pc_wire)
   );
 
   instr_mem instruction_memory (
@@ -152,10 +153,14 @@ module top (
   // Memory, Writeback & Control Flow
   // -------------------------------------------------------------------------
 
+
+  // pc logic
+  assign target_pc     = jalr_flag ? alu_result : (pc_wire + imm_val);
+  assign next_pc       = take_jump ? target_pc : pc_plus_4;
+
   // jump calculation
-  assign target_pc = jalr_flag ? alu_result : (pc_wire + imm_val);
-  assign take_jump = jump | jalr_flag | branch_condition_met;
-  wire [31:0] pc_plus_4 = pc_wire + 32'd4;
+  assign take_jump     = jump | jalr_flag | branch_condition_met;
+  assign pc_plus_4     = pc_wire + 32'd4;
 
   // memory & MIMO logic
   assign is_accel_addr = alu_result[7];
