@@ -18,34 +18,28 @@ module top (
   wire        mem_we;
 
   // instruction fetch signals
-  wire [31:0] pc_wire;
-  wire [31:0] fetched_instruction;
-  wire [31:0] target_pc;
-  wire [31:0] next_pc;
-  wire [31:0] pc_plus_4;
-  wire        take_jump;
+  wire [31:0] pc_wire, fetched_instruction, target_pc, next_pc, pc_plus_4;
+  wire       take_jump;
 
   // decoder & immediate signals
-  wire [ 6:0] opcode;
+  wire [6:0] opcode;
   wire [4:0] rd, rs1, rs2;
   wire [ 2:0] funct3;
   wire [ 6:0] funct7;
   wire [31:0] imm_val;
 
   // control unit signals
-  wire        reg_we;
   wire [ 3:0] alu_ctrl;
-  wire        alu_src;
-  wire        data_mem_we;
   wire [ 1:0] result_src;
-  wire branch, jump, jalr_flag;
+  wire [31:0] steered_wd;
+  wire reg_we, alu_src, data_mem_ew, branch, jump, jalr_flag;
+  reg [31:0] steered_rd;
 
   // execution & data path signals
   wire [31:0] reg_rd1, reg_rd2, reg_wd;
   wire [31:0] alu_a_in, alu_b_in, alu_result;
-  wire alu_zero;
-  wire alu_lt;
-  reg  branch_condition_met;
+  wire alu_zero, alu_lt;
+  reg branch_condition_met;
 
   // memory & accelerator signals
   wire [31:0] data_rd, final_data_rd, accel_dout;
@@ -149,18 +143,41 @@ module top (
 
 
   // pc logic
-  assign target_pc     = jalr_flag ? alu_result : (pc_wire + imm_val);
-  assign next_pc       = take_jump ? target_pc : pc_plus_4;
+  assign target_pc = jalr_flag ? alu_result : (pc_wire + imm_val);
+  assign next_pc = take_jump ? target_pc : pc_plus_4;
 
   // jump calculation
-  assign take_jump     = jump | jalr_flag | branch_condition_met;
-  assign pc_plus_4     = pc_wire + 32'd4;
+  assign take_jump = jump | jalr_flag | branch_condition_met;
+  assign pc_plus_4 = pc_wire + 32'd4;
 
   // memory & MIMO logic
   assign is_accel_addr = alu_result[7];
-  assign ram_we_wire   = data_mem_we & !is_accel_addr;
+  assign ram_we_wire = data_mem_we & !is_accel_addr;
   assign accel_we_wire = data_mem_we & is_accel_addr;
-  assign final_data_rd = is_accel_addr ? accel_dout : data_rd;
+  assign final_data_rd = is_accel_addr ? accel_dout : steered_rd;
+
+  // logic to 'steer' store data into the correct byte lanes
+  assign steered_wd = (funct3 == 3'b000) ? (reg_rd2[7:0] << (alu_result[1:0] * 8)) :  // sb
+      (funct3 == 3'b001) ? (reg_rd2[15:0] << (alu_result[1] * 16)) :  // sh
+      reg_rd2;  // sw
+
+  // shift back and apply sign extension after getting raw word from ram
+  assign steered_wd = (funct3 == 3'b010) ? reg_rd2 :  // sw
+      (funct3 == 3'b001) ? (reg_rd2[15:0] << (alu_result[1] * 16)) :  // sh
+      (reg_rd2[7:0] << (alu_result[1:0] * 8));  // sb
+
+  wire [ 7:0] selected_byte = data_rd >> (alu_result[1:0] * 8);
+  wire [15:0] selected_half = data_rd >> (alu_result[1] * 16);
+
+  always @(*) begin
+    case (funct3)
+      3'b000:  steered_rd = {{24{selected_byte[7]}}, selected_byte};  // lb
+      3'b001:  steered_rd = {{16{selected_half[15]}}, selected_half};  // lh
+      3'b100:  steered_rd = {24'b0, selected_byte};  // lbu
+      3'b101:  steered_rd = {16'b0, selected_half};  // lhu
+      default: steered_rd = data_rd;  // lw
+    endcase
+  end
 
   // determine branch condition using ALU flags
   always @(*) begin
@@ -179,14 +196,35 @@ module top (
     end
   end
 
+  // generate the byte-enable mask
+  reg [3:0] byte_en;
+  always @(*) begin
+    if (ram_we_wire) begin
+      case (funct3)
+        3'b000:  // sb: select one byte lane
+        case (alu_result[1:0])
+          2'b00: byte_en = 4'b0001;
+          2'b01: byte_en = 4'b0010;
+          2'b10: byte_en = 4'b0100;
+          2'b11: byte_en = 4'b1000;
+        endcase
+        3'b001:  // sh: select two byte lanes
+        byte_en = (alu_result[1]) ? 4'b1100 : 4'b0011;
+        3'b010:  // sw: select all four lanes
+        byte_en = 4'b1111;
+        default: byte_en = 4'b0000;
+      endcase
+    end else begin
+      byte_en = 4'b0000;
+    end
+  end
+
   data_mem ram_blocks (
-      .clk(clk),
-      .we(ram_we_wire),
-      .funct3(funct3),
-      .word_addr(alu_result[9:2]),
-      .byte_offset(alu_result[1:0]),
-      .wd(reg_rd2),
-      .rd(data_rd)
+      .clk (clk),
+      .be  (byte_en),
+      .addr(alu_result[9:2]),  // the 8-bit word index
+      .wd  (steered_wd),       // the data already shifted to the right byte lane
+      .rd  (data_rd)           // raw 32-bit word comes out
   );
 
   pixel_processor img_engine (
