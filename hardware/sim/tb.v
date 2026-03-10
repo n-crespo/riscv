@@ -37,16 +37,17 @@ module tb;
 
   initial begin
     clk   = 0;
-    reset = 1;
     RsRx  = 1;
+    reset = 1;
 
-    // --- Logic Paths (0-13) ---
-    $readmemh("sim/tb.hex", uut.instruction_memory.ram);
+    $readmemh("sim/tb.hex", uut.instruction_memory.ram);  // load assembly
+    #22 reset = 0;  // release reset and start CPU
 
-    #22 reset = 0;  // wait for initial state to stabilize
-    #590;  // wait for program to finish + pc to reach the end of instructions
+    // wait until finished flag is 1
+    wait (uut.registers.registers[2] == 32'h1);
 
-    $display("--- SIMULATION RESULTS ---");
+    // wait one final clock cycle for last write to settle
+    #10 $display("--- SIMULATION RESULTS ---");
 
     // basic logic & memory
     check_test(uut.registers.registers[3], 12, "math logic");

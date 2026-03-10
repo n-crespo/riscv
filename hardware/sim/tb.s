@@ -142,9 +142,12 @@ B4:
 # test bge (10 >= -5)
 addi x7, x0, 0 # x7 = 0 (initialize flag)
 bge  x21, x22, B5 # jump to B5 if (-10 > -5)
-jal  x0, B6 # skip success
+jal  x0, B6 # skip success (SHOULD BE SKIPPED)
 
 B5:
 	addi x7, x0, 1 # x7 = 1 (success)
 
 B6:
+end_sim:
+	addi x2, x0, 1 # set finished flag
+	jal  x0, end_sim # infinite loop so flag is always set
