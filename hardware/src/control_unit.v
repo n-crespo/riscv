@@ -9,6 +9,7 @@ module control_unit (
     output reg alu_src,
     output reg mem_we,     // data memory write enable
     output reg [1:0] result_src,  // 0: alu result, 1: mem read, 10: pc+1, 11: upper_imm result
+    output reg [2:0] imm_src,     // 0:I, 1:S, 2:B, 3:J, 4:U
 
     // conditionals/loops
     output reg branch,  // 1 when branch instruction received
@@ -24,6 +25,7 @@ module control_unit (
     alu_src    = 1'b0;
     mem_we     = 1'b0;
     result_src = 2'b00;
+    imm_src    = 3'b000;
     branch     = 1'b0;
     jump       = 1'b0;
     jalr_flag  = 1'b0;
@@ -33,6 +35,7 @@ module control_unit (
       7'b0110011: begin
         reg_we  = 1'b1;  // we want to save the math result
         alu_src = 1'b0;  // route rs2 into the alu's second input
+        imm_src = 3'b000; // doesn't matter for R-type, but keeping it clean
 
         case (funct3)
           3'b000: begin
@@ -63,6 +66,7 @@ module control_unit (
       7'b0010011: begin
         reg_we  = 1'b1;  // we want to save the math result
         alu_src = 1'b1;  // route imm_val into the alu's second input
+        imm_src = 3'b000; // I-type immediate
 
         case (funct3)
           3'b000:  alu_ctrl = 4'b0000;  // addi
@@ -90,6 +94,7 @@ module control_unit (
         alu_ctrl   = 4'b0000;  // standard addition
         mem_we     = 1'b0;  // reading from memory, not writing
         result_src = 2'b01;  // route memory data to register file instead of alu result
+        imm_src    = 3'b000; // I-type immediate
       end
 
       // store instructions (sw)
@@ -99,6 +104,7 @@ module control_unit (
         alu_ctrl   = 4'b0000;  // standard addition
         mem_we     = 1'b1;  // write to memory!
         result_src = 1'b0;  // doesn't matter, reg_we is 0
+        imm_src    = 3'b001; // S-type immediate
       end
 
       // branch instructions
@@ -106,7 +112,8 @@ module control_unit (
         reg_we  = 1'b0;
         alu_src = 1'b0;  // compare two registers
         mem_we  = 1'b0;
-        branch  = 1'b1;
+        branch  = 1'b1;  // flag as a branch
+        imm_src = 3'b010; // B-type immediate
 
         case (funct3)
           3'b000, 3'b001: alu_ctrl = 4'b0001;  // beq, bne -> subtract to get zero flag
@@ -123,6 +130,7 @@ module control_unit (
         alu_ctrl   = 4'b0000;
         mem_we     = 1'b0;
         result_src = 2'b10;  // flag to select PC + 4
+        imm_src    = 3'b011; // J-type immediate
         branch     = 1'b0;
         jump       = 1'b1;  // flag as a jal
       end
@@ -134,6 +142,7 @@ module control_unit (
         alu_ctrl   = 4'b0000;  // ALU does addition (rs1 + imm)
         mem_we     = 1'b0;
         result_src = 2'b10;  // flag to select PC + 4 for the register file
+        imm_src    = 3'b000; // jalr uses I-type immediate
         branch     = 1'b0;
         jump       = 1'b0;  // handled by jalr_flag instead
         jalr_flag  = 1'b1;  // flag as a jalr
@@ -146,6 +155,7 @@ module control_unit (
         alu_ctrl   = 4'b0000;  // add so it does 0 + Imm
         mem_we     = 1'b0;
         result_src = 2'b11;  // flag to select special upper_imm logic
+        imm_src    = 3'b100; // U-type immediate
       end
 
       // add upper immediate to pc (auipc)
@@ -155,6 +165,7 @@ module control_unit (
         alu_ctrl   = 4'b0000;  // addition
         mem_we     = 1'b0;
         result_src = 2'b11;  // same mux path as lui, but logic will include PC
+        imm_src    = 3'b100; // U-type immediate
       end
 
       default: begin
@@ -163,6 +174,7 @@ module control_unit (
         alu_src    = 1'b0;
         mem_we     = 1'b0;
         result_src = 1'b0;
+        imm_src    = 3'b000;
         branch     = 1'b0;
         jump       = 1'b0;
         jalr_flag  = 1'b0;

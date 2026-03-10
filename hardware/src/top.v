@@ -27,6 +27,7 @@ module top (
   wire [ 2:0] funct3;
   wire [ 6:0] funct7;
   wire [31:0] imm_val;
+  wire [ 2:0] imm_src;
 
   // control unit signals
   wire [ 3:0] alu_ctrl;
@@ -86,6 +87,7 @@ module top (
 
   imm_gen immediate_generator (
       .instr  (fetched_instruction),
+      .imm_src(imm_src),
       .imm_out(imm_val)
   );
 
@@ -96,6 +98,7 @@ module top (
       .reg_we(reg_we),
       .alu_ctrl(alu_ctrl),
       .alu_src(alu_src),
+      .imm_src(imm_src),
       .mem_we(data_mem_we),
       .result_src(result_src),
       .branch(branch),
