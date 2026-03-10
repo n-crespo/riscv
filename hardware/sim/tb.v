@@ -45,7 +45,7 @@ module tb;
 
     // adjust the run time to ensure PC reaches the final index
     #22 reset = 0;
-    #2000;
+    #590;
 
     $display("--- SIMULATION RESULTS ---");
 
