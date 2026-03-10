@@ -14,10 +14,11 @@ module reg_file (
   // 32 registers, each 32 bits wide
   reg [31:0] registers[0:31];
 
-  // the default path, always on while we != 1
-  // read asynchronously. simply output the requested register's contents
-  assign rd1 = (rs1 == 5'b0) ? 32'b0 : registers[rs1];
-  assign rd2 = (rs2 == 5'b0) ? 32'b0 : registers[rs2];
+  // if we are writing to the same register we are reading from, pass the 'wd'
+  // directly to the output. prevents a 1-cycle delay.
+  assign rd1 = (rs1 == 5'b0) ? 32'b0 : ((we && (rs1 == rd)) ? wd : registers[rs1]);
+
+  assign rd2 = (rs2 == 5'b0) ? 32'b0 : ((we && (rs2 == rd)) ? wd : registers[rs2]);
 
   integer i;
   initial begin
