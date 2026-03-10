@@ -32,7 +32,7 @@ module top (
   wire [ 3:0] alu_ctrl;
   wire [ 1:0] result_src;
   wire [31:0] steered_wd;
-  wire reg_we, alu_src, data_mem_ew, branch, jump, jalr_flag;
+  wire reg_we, alu_src, data_mem_we, branch, jump, jalr_flag;
   reg [31:0] steered_rd;
 
   // execution & data path signals
@@ -102,6 +102,7 @@ module top (
       .jump(jump),
       .jalr_flag(jalr_flag)
   );
+
   // -------------------------------------------------------------------------
   // Register File & Execution (ALU)
   // -------------------------------------------------------------------------
@@ -141,14 +142,15 @@ module top (
   // Memory, Writeback & Control Flow
   // -------------------------------------------------------------------------
 
-
   // pc logic
+  // jal/branch: pc + (immediate)
+  // jalr: use the exact address calculated by ALU (rs1 + imm)
   assign target_pc = jalr_flag ? alu_result : (pc_wire + imm_val);
-  assign next_pc = take_jump ? target_pc : pc_plus_4;
 
-  // jump calculation
-  assign take_jump = jump | jalr_flag | branch_condition_met;
+  // next pc logic
   assign pc_plus_4 = pc_wire + 32'd4;
+  assign take_jump = jump | jalr_flag | branch_condition_met;
+  assign next_pc = take_jump ? target_pc : pc_plus_4;
 
   // memory & MIMO logic
   assign is_accel_addr = alu_result[7];
@@ -156,16 +158,12 @@ module top (
   assign accel_we_wire = data_mem_we & is_accel_addr;
   assign final_data_rd = is_accel_addr ? accel_dout : steered_rd;
 
-  // logic to 'steer' store data into the correct byte lanes
-  assign steered_wd = (funct3 == 3'b000) ? (reg_rd2[7:0] << (alu_result[1:0] * 8)) :  // sb
-      (funct3 == 3'b001) ? (reg_rd2[15:0] << (alu_result[1] * 16)) :  // sh
-      reg_rd2;  // sw
-
-  // shift back and apply sign extension after getting raw word from ram
+  // logic to steer store data into the correct byte lanes
   assign steered_wd = (funct3 == 3'b010) ? reg_rd2 :  // sw
       (funct3 == 3'b001) ? (reg_rd2[15:0] << (alu_result[1] * 16)) :  // sh
       (reg_rd2[7:0] << (alu_result[1:0] * 8));  // sb
 
+  // shift back and apply sign extension after getting raw word from ram
   wire [ 7:0] selected_byte = data_rd >> (alu_result[1:0] * 8);
   wire [15:0] selected_half = data_rd >> (alu_result[1] * 16);
 
@@ -238,9 +236,9 @@ module top (
 
   // final writeback mux
   assign reg_wd = (result_src == 2'b11) ? alu_result    :
-                    (result_src == 2'b10) ? pc_plus_4     :
-                    (result_src == 2'b01) ? final_data_rd :
-                                            alu_result;
+                  (result_src == 2'b10) ? pc_plus_4     :
+                  (result_src == 2'b01) ? final_data_rd :
+                                          alu_result;
 
   // -------------------------------------------------------------------------
   // UART Snooper Logic & Debug
@@ -268,4 +266,3 @@ module top (
   assign led[15:8] = write_addr;
 
 endmodule
-
