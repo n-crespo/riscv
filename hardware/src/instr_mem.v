@@ -8,7 +8,7 @@ module instr_mem (
     input [31:0] din_a,   // (data in) the 32-bit instruction to save
 
     // port b: for the cpu to read instructions
-    input [7:0] addr_b,     // which address the cpu wants the instruction of
+    input [31:0] addr_b,     // which address the cpu wants the instruction of
     output wire [31:0] dout_b // data out (32 bit instruction)
 );
 
@@ -23,6 +23,6 @@ module instr_mem (
   end
 
   // Read Logic (Port B)
-  assign dout_b = ram[addr_b];
+  assign dout_b = ram[addr_b[9:2]];
 
 endmodule

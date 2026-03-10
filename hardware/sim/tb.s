@@ -142,12 +142,26 @@ B4:
 # test bge (10 >= -5)
 addi x7, x0, 0 # x7 = 0 (initialize flag)
 bge  x21, x22, B5 # jump to B5 if (-10 > -5)
-jal  x0, B6 # skip success (SHOULD BE SKIPPED)
+jal  x0, B6 # jump to B6, don't set success flag (THIS SHOULD BE SKIPPED)
 
 B5:
 	addi x7, x0, 1 # x7 = 1 (success)
 
 B6:
+
+# -------------------------
+# --- U-Type Instructions ---
+# -------------------------
+.org 0x100               # 64 * 4 = 0x100 (starts at ram[64])
+
+# Load 0x12345 into the upper 20 bits of x22
+lui x22, 0x12345 # Result should be 0x12345000
+
+# Add 0x00001 to the current PC and store in x23
+# The PC at this instruction is 0x104 (byte address).
+# PC (0x104) + 0x00001000 = 0x00001104
+auipc x23, 0x1
+
 end_sim:
 	addi x2, x0, 1 # set finished flag
 	jal  x0, end_sim # infinite loop so flag is always set

@@ -29,6 +29,12 @@ module imm_gen (
         imm_out = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
       end
 
+      // u-type instructions (lui, auipc)
+      7'b0110111, 7'b0010111: begin
+        // take top 20 bits and pad bottom with 12 zeros
+        imm_out = {instr[31:12], 12'b0};
+      end
+
       default: imm_out = 32'd0;
     endcase
   end

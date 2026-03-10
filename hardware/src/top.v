@@ -19,14 +19,14 @@ module top (
   wire        mem_we;
 
   // wires for the program counter and fetched instruction
-  wire [ 7:0] pc_wire;
+  wire [31:0] pc_wire;
   wire [31:0] fetched_instruction;
 
   // branching and jump logic
   wire        branch;
   wire        jump;
   wire        take_jump;  // 1 when we need to jump to target_pc
-  wire [ 7:0] target_pc;  // the address of the instruction we need to jump to
+  wire [31:0] target_pc;  // the address of the instruction we need to jump to
 
   uart_rx #(
       .CLKS_PER_BIT(10416)
@@ -91,6 +91,7 @@ module top (
   wire        reg_we;
   wire [ 3:0] alu_ctrl;
   wire        alu_src;  // when 0, use source register, when 1 use immediate value
+  wire [31:0] alu_a_in;  // wire for ALU's first input MUX
   wire        data_mem_we;  // wire for data memory write enable
   wire [ 1:0] result_src;  // wire for writeback selection
   wire        jalr_flag;  // wire for jalr signal
@@ -121,14 +122,14 @@ module top (
   // jump target calculation
   // jal/branch: pc + (immediate / 4)
   // jalr: use the exact word-index stored in the register (alu_result)
-  assign target_pc = jalr_flag ? alu_result[7:0] : (pc_wire + imm_val[9:2]);
+  assign target_pc = jalr_flag ? alu_result : (pc_wire + imm_val);
 
   // logic gate determining if the pc should actually jump
   // we jump if it's a jal, a jalr, or a successful branch
   assign take_jump = jump | jalr_flag | branch_condition_met;
 
   // wire to calculate the return address
-  wire [31:0] pc_plus_one = {24'b0, pc_wire + 1'b1};
+  wire [31:0] pc_plus_4 = pc_wire + 32'd4;
 
   // logic to determine if we are accessing the accelerator
   // if address >= 128 (8'h80), it's the pixel processor
@@ -144,9 +145,10 @@ module top (
   // choose between ram and accelerator data
   wire [31:0] final_data_rd = is_accel_addr ? accel_dout : data_rd;
 
-  assign reg_wd = (result_src == 2'b10) ? pc_plus_one :
-                (result_src == 2'b01) ? final_data_rd :
-                                        alu_result;
+  assign reg_wd = (result_src == 2'b11) ? alu_result :
+                  (result_src == 2'b10) ? pc_plus_4 :
+                  (result_src == 2'b01) ? final_data_rd :
+                                          alu_result;
 
   // register file instance
   reg_file registers (
@@ -168,9 +170,14 @@ module top (
       .out(alu_b_in)
   );
 
+  // r-type/i-type (reg_rd1), auipc (pc), and lui (zero)
+  assign alu_a_in = (opcode == 7'b0010111) ? {24'b0, pc_wire} :  // AUIPC: use PC
+      (opcode == 7'b0110111) ? 32'b0 :  // LUI:   use 0
+      reg_rd1;  // Default: use rs1
+
   // alu instance
   alu main_alu (
-      .a       (reg_rd1),
+      .a       (alu_a_in),
       .b       (alu_b_in),
       .alu_ctrl(alu_ctrl),
       .out     (alu_result),

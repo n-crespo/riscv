@@ -80,6 +80,11 @@ module tb;
     check_test(uut.registers.registers[6], 1, "blt logic");
     check_test(uut.registers.registers[7], 1, "bge logic");
 
+    // u-type instructions
+    check_test(uut.registers.registers[22], 32'h12345000, "lui logic");
+    // PC was 0x104 when this ran. 0x104 + 0x1000 = 0x1104
+    check_test(uut.registers.registers[23], 32'h00001104, "auipc logic");
+
     $display("--------------------------");
     $display("SUMMARY: %0d PASSED, %0d FAILED", tests_passed, tests_failed);
     $display("--------------------------");

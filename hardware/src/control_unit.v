@@ -8,7 +8,7 @@ module control_unit (
     output reg [3:0] alu_ctrl,
     output reg alu_src,
     output reg mem_we,     // data memory write enable
-    output reg [1:0] result_src,  // 0 for alu result, 1 for mem read, 10 for pc+1
+    output reg [1:0] result_src,  // 0: alu result, 1: mem read, 10: pc+1, 11: upper_imm result
 
     // conditionals/loops
     output reg branch,  // 1 when branch instruction received
@@ -118,21 +118,39 @@ module control_unit (
         alu_src    = 1'b0;
         alu_ctrl   = 4'b0000;
         mem_we     = 1'b0;
-        result_src = 2'b10;  // flag to select PC + 1
+        result_src = 2'b10;  // flag to select PC + 4
         branch     = 1'b0;
         jump       = 1'b1;  // flag as a jal
       end
 
       // jump and link register (jalr)
       7'b1100111: begin
-        reg_we     = 1'b1;  // save return address (PC + 1)
+        reg_we     = 1'b1;  // save return address (PC + 4)
         alu_src    = 1'b1;  // route immediate into ALU
         alu_ctrl   = 4'b0000;  // ALU does addition (rs1 + imm)
         mem_we     = 1'b0;
-        result_src = 2'b10;  // flag to select PC + 1 for the register file
+        result_src = 2'b10;  // flag to select PC + 4 for the register file
         branch     = 1'b0;
         jump       = 1'b0;  // handled by jalr_flag instead
         jalr_flag  = 1'b1;  // flag as a jalr
+      end
+
+      // load upper immediate (lui)
+      7'b0110111: begin
+        reg_we     = 1'b1;
+        alu_src    = 1'b1;  // route imm into ALU
+        alu_ctrl   = 4'b1111;  // custom 'pass-through' or special mode
+        mem_we     = 1'b0;
+        result_src = 2'b11;  // flag to select special upper_imm logic
+      end
+
+      // add upper immediate to pc (auipc)
+      7'b0010111: begin
+        reg_we     = 1'b1;
+        alu_src    = 1'b1;
+        alu_ctrl   = 4'b0000;  // addition
+        mem_we     = 1'b0;
+        result_src = 2'b11;  // same mux path as lui, but logic will include PC
       end
 
       default: begin
