@@ -139,7 +139,7 @@ module control_unit (
       7'b0110111: begin
         reg_we     = 1'b1;
         alu_src    = 1'b1;  // route imm into ALU
-        alu_ctrl   = 4'b1111;  // custom 'pass-through' or special mode
+        alu_ctrl   = 4'b0000;  // add so it does 0 + Imm
         mem_we     = 1'b0;
         result_src = 2'b11;  // flag to select special upper_imm logic
       end
