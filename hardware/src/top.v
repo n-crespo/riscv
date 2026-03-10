@@ -7,16 +7,10 @@ module top (
 
   wire        rx_dv;  // data valid?
   wire [ 7:0] rx_byte;  // will carry bytes of the serial data
-
-  // a register holding the 32 instruction bits, currently set to all zeros in hex
-  reg  [31:0] instruction_reg = 32'h0;
-  // a register containing 2 bits, initialized to 00 in binary
+  reg  [31:0] instruction_reg = 32'h0;  // holds instruction bits, set to zeros first
   reg  [ 1:0] byte_count = 2'b00;
-  // a register containing 8 bits to track memory location
-  reg  [ 7:0] write_addr = 8'h0;
-
-  // wire to trigger the instruction memory save
-  wire        mem_we;
+  reg  [ 7:0] write_addr = 8'h0;  // 8 bites to track memory location
+  wire        mem_we;  // trigger instruction memory save
 
   // wires for the program counter and fetched instruction
   wire [31:0] pc_wire;
