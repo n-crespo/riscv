@@ -237,7 +237,10 @@ module tb;
   end
 
   // task to automate the pass/fail boilerplate
-  task check_test(input [31:0] actual, input [31:0] expected, input [127:0] test_name);
+  task automatic check_test;
+    input [31:0] actual;
+    input [31:0] expected;
+    input [127:0] test_name;
     begin
       if (actual === expected) begin
         $display("PASS: %s", test_name);
