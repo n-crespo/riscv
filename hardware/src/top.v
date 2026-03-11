@@ -25,6 +25,13 @@ module top (
   wire [31:0] instr_ex;  // instruction currently executing
   wire        take_jump;  // branch decision
 
+  wire reg_we, alu_src, data_mem_we, branch, jump, jalr_flag;
+  wire [31:0] alu_a_in, alu_b_in, alu_result;
+
+  // immediate signals
+  wire [31:0] imm_val;
+  wire [ 2:0] imm_src;
+
   // -------------------------------------------------------------------------
   // STAGE 1: FETCH (IF)
   // -------------------------------------------------------------------------
@@ -84,20 +91,14 @@ module top (
   wire [ 4:0] rs2 = instr_ex[24:20];
   wire [ 6:0] funct7 = instr_ex[31:25];
 
-  // immediate signals
-  wire [31:0] imm_val;
-  wire [ 2:0] imm_src;
-
   // control unit signals
   wire [ 3:0] alu_ctrl;
   wire [ 1:0] result_src;
   wire [31:0] steered_wd;
-  wire reg_we, alu_src, data_mem_we, branch, jump, jalr_flag;
-  reg [31:0] steered_rd;
+  reg  [31:0] steered_rd;
 
   // execution & data path signals
   wire [31:0] reg_rd1, reg_rd2, reg_wd;
-  wire [31:0] alu_a_in, alu_b_in, alu_result;
   wire alu_zero, alu_lt;
   reg branch_condition_met;
 
