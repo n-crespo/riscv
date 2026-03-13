@@ -35,6 +35,12 @@ module tb;
   // generate a 100MHz clock (10ns period)
   always #5 clk = ~clk;
 
+  // generate waveform! (open with `gtkwave tb_waveform.vcd`)
+  initial begin
+    $dumpfile("tb_waveform.vcd");
+    $dumpvars(0, tb);
+  end
+
   initial begin
     clk   = 0;
     RsRx  = 1;
