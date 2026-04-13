@@ -1,27 +1,4 @@
-# Plan (nicolas)
-
-- debug environment?
-  - map program counter to LEDs
-
-## Fused-MAC Extension
-
-Standard RISC-V requires multiple instructions to perform a single neural
-network operation ($Load \rightarrow \ Multiply \rightarrow \ Add$).
-This creates a bottleneck at the register file.
-
-- **The Extension:** `vmac.8` (Vector Multiply-Accumulate 8-bit).
-- **What it does:** It treats two 32-bit registers as vectors of four 8-bit
-  integers (INT8). In a single cycle, it multiplies all four pairs and adds the
-  sum to a 32-bit accumulator.
-- **Benefit over CPU/GPU:**
-  - **vs. CPU:** A CPU would take ~12 instructions to do what this does in 1.
-    This reduces power consumption by 50–80% for the same task.
-  - **vs. GPU:** GPUs are fast but "jittery." They have variable latency due to
-    driver overhead. This extension provides **deterministic latency**, meaning
-    you know exactly which clock cycle the result will be ready, which is critical
-    for safety-critical robotics.
-
----
+# Notes
 
 Inline Assembly + C macros
 
@@ -30,3 +7,23 @@ Inline Assembly + C macros
   asm volatile(".word 0x00B50533" : [dst] "=r" (rd) : [s1] "r" (rs1), [s2] "r" (rs2))
 
 ```
+
+neural networks require "spatial stationary", rigid grids (image/video)
+
+## Neural Network Inference
+
+- will not implement floating point
+  - instead, quantization (-1, 1) --> (-128, 128)
+- will benchmark
+  - baseline: (CNN code with only standard RISC-V instructions)
+  - accelerated: swap inner MAC loop with custom VMAC MMIO calls
+  - check cycle count with Verilator!
+
+- [ ] train a model on `MNIST`
+- [ ] print one layer of weights to a text file
+- [ ] write C to read weights/perform convolution
+- [ ] compile to RISCV, check it output matches python
+
+- MobileNet
+  - (with width multiplier of 0.25)?
+  - uses Depthwise Separable Convolutions instead of normal convolution
