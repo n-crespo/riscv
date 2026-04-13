@@ -20,7 +20,23 @@ neural networks require "spatial stationary", rigid grids (image/video)
   - check cycle count with Verilator!
 
 - [ ] train a model on `MNIST`
+  - [ ] use ReLU for simplicity (division/exponentials are harder in RV32I)
+  - [ ] quantize with a power of 2 so i can bit shift
+  - [ ] **channel count** as multiple of 4 or 8
+
+- custom tiny CNN
+  - designed for 28x28 MNIST
+  - Conv2D: 3x3 kernel, 4-8 filters (vmac)
+  - ReLU as activation function
+  - 2x2 maxpool (minimize BRAM)
+  - **flatten/dense** --> 10 outputs for 0-9 digits?
+
+- benchmark
+  - cycles per convoluiton
+  - memory access count (stalls while waiting for BRAM)
+
 - [ ] print one layer of weights to a text file
+  - [ ] python script to grab weights, use include header
 - [ ] write C to read weights/perform convolution
 - [ ] compile to RISCV, check it output matches python
 
