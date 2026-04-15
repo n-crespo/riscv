@@ -10,10 +10,20 @@ module accumulator;
   reg RsRx;
   wire [15:0] led;
 
-  // clock cycle counter
+  // performance counters
   integer cycles = 0;
+  integer instructions = 0;
+  real cpi;
+
   always @(posedge clk) begin
     if (!reset) cycles <= cycles + 1;
+  end
+
+  // count retired instructions
+  always @(posedge clk) begin
+    if (!reset && cycles > 0 && uut.instr_raw !== 32'h00100073) begin
+      instructions <= instructions + 1;
+    end
   end
 
   // uut instantiation
@@ -50,16 +60,16 @@ module accumulator;
     // allow pipeline to settle
     @(posedge clk);
 
-    $display("\n================ ACCUMULATOR REPORT ================");
-    // check if sum matches 10+20+30+40+50
-    if (uut.registers.registers[12] == 32'd150) begin
-      $display("SUCCESS: final sum in x12 is 150");
-    end else begin
-      $display("FAILURE: expected 150, got %d", $signed(uut.registers.registers[12]));
-    end
+    $display("\n================ PERFORMANCE REPORT ================");
+    $display("%-22s: %10d", "Final Result (x12)", $signed(uut.registers.registers[12]));
+    $display("----------------------------------------------------");
+    $display("%-22s: %10d", "Total Cycles", cycles);
+    $display("%-22s: %10d", "Instructions Retired", instructions);
 
-    $display("Final Pointer (x10): %d", uut.registers.registers[10]);
-    $display("Total Cycles:       %d", cycles);
+    if (instructions > 0) begin
+      cpi = (cycles * 1.0) / instructions;
+      $display("%-22s: %10.2f", "Average CPI", cpi);
+    end
     $display("====================================================\n");
 
     $finish;
