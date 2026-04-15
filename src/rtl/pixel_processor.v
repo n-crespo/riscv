@@ -1,4 +1,8 @@
-// Processes pixel values with MIMO. Expects 4 bytes: [Alpha][Red][Green][Blue].
+`timescale 1ns / 1ps
+
+/**
+ * Processes pixel values with mmio and hardware acceleration
+ */
 module pixel_processor (
     input         clk,
     input         reset,
@@ -17,13 +21,13 @@ module pixel_processor (
   wire [7:0] gray_final;
   wire [7:0] bw_final;
 
-  // unpack the 32-bit word
+  // unpack the 32-bit word from [alpha][red][green][blue] format
   assign r = din[23:16];
   assign g = din[15:8];
   assign b = din[7:0];
 
-  // threshold register write logic
-  always @(posedge clk or posedge reset) begin
+  // threshold register write logic with synchronous reset
+  always @(posedge clk) begin
     if (reset) begin
       threshold_reg <= 8'h80;
     end else if (we && addr == 2'b01) begin
