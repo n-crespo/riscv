@@ -1,73 +1,60 @@
 `timescale 1ns / 1ps
-// Arithmetic logic unit for standard RISC-V operations
+
+/**
+ * Arithmetic logic unit for standard RISC-V operations
+ */
 module alu (
     input      [31:0] a,         // first operand
     input      [31:0] b,         // second operand
     input      [ 3:0] alu_ctrl,  // operation selector
     output reg [31:0] out,       // calculation result
-    output            zero,      // high if a == b (when subtracting)
+    output            zero,      // high if a == b
     output reg        lt         // high if a < b
 );
 
-  assign zero = (a == b);  // compare inputs directly for speed
+  assign zero = (a == b);
 
-  // single 32-bit adder/subtractor logic
-  // handle subtraction by inverting B and adding 1 (via carry-in)
-  wire           is_sub = (alu_ctrl == 4'b0001 || alu_ctrl == 4'b0011 || alu_ctrl == 4'b1001);
-  wire    [31:0] b_inv = is_sub ? ~b : b;
-  wire    [31:0] sum = a + b_inv + is_sub;
+  // detect if operation is subtraction for shared adder logic
+  wire is_sub = (alu_ctrl == 4'b0001 || alu_ctrl == 4'b0011 || alu_ctrl == 4'b1001);
 
-  // sign-bit logic for comparisons
-  wire           slt_result = (a[31] != b[31]) ? a[31] : sum[31];
+  // invert bits of b for two's complement subtraction
+  wire [31:0] b_inv = is_sub ? ~b : b;
 
-  // Unified Shifter
-  // flip the bits for left shift support
-  integer        j;
-  reg     [31:0] a_flipped;
-  always @(*) begin
-    for (j = 0; j < 32; j = j + 1) a_flipped[j] = a[31-j];
-  end
+  // do the addition or subtraction with ONE 32-bit adder
+  wire [31:0] sum = a + b_inv + is_sub;
 
-  // pick the right operand for the shifter
-  wire [31:0] shifter_in = (alu_ctrl == 4'b0010) ? a_flipped : a;
-
-  // the unified shifter unit
-  // $signed() + >>> allows us to support both SRL and SRA in one line
-  wire [31:0] shifter_raw = (alu_ctrl == 4'b1000) ? ($signed(
-      shifter_in
-  ) >>> b[4:0]) : (shifter_in >> b[4:0]);
-
-  // flip it back if we were doing a left shift
-  reg [31:0] shifter_out;
-  always @(*) begin
-    for (j = 0; j < 32; j = j + 1) shifter_out[j] = shifter_raw[31-j];
-  end
-
-  // final choice for shift result
-  wire [31:0] final_shift = (alu_ctrl == 4'b0010) ? shifter_out : shifter_raw;
+  // get signed comparison result with sign bits and overflow logic
+  wire slt_result = (a[31] != b[31]) ? a[31] : sum[31];
 
   always @(*) begin
-    // default lt to zero unless in comparison mode
+    // default comparison output to zero
     lt = 1'b0;
 
     case (alu_ctrl)
       4'b0000: out = sum;  // add
       4'b0001: out = sum;  // subtract
-      4'b0010: out = final_shift;  // shift left logical (using unified shifter)
-      4'b0011: begin  // slt / blt logic
+
+      4'b0100: out = a ^ b;  // xor
+      4'b0110: out = a | b;  // or
+      4'b0111: out = a & b;  // and
+
+      // use native verilog operations for simulation efficiency
+      4'b0010: out = a << b[4:0];  // sll: shift left logical
+      4'b0101: out = a >> b[4:0];  // srl: shift right logical
+      4'b1000: out = $signed(a) >>> b[4:0];  // sra: shift right arithmetic (replicate sign bit)
+
+      // signed comparison (slt/blt)
+      4'b0011: begin
         out = {31'b0, slt_result};
         lt  = slt_result;
       end
-      4'b0100: out = a ^ b;  // xor
-      4'b0101: out = final_shift;  // shift right logical (using unified shifter)
-      4'b0110: out = a | b;  // or
-      4'b0111: out = a & b;  // and
-      4'b1000: out = final_shift;  // shift right arithmetic (using unified shifter)
-      4'b1001: begin  // sltu / bltu logic
-        // if a < b, then a - b will require a borrow (sum[31] in this context)
+
+      // unsigned comparison (sltu/bltu)
+      4'b1001: begin
         out = (a < b) ? 32'd1 : 32'd0;
         lt  = (a < b);
       end
+
       default: out = 32'd0;
     endcase
   end
