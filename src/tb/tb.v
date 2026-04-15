@@ -37,7 +37,7 @@ module tb;
 
   // generate waveform! (open with `gtkwave tb_waveform.vcd`)
   initial begin
-    $dumpfile("tb_waveform.vcd");
+    $dumpfile(".build/tb_waveform.vcd");
     $dumpvars(0, tb);
   end
 
