@@ -10,11 +10,8 @@ module inspect;
   reg RsRx;
   wire [15:0] led;
 
-  // count cycles
-  integer cycles = 0;
-  always @(posedge clk) begin
-    if (!reset) cycles <= cycles + 1;
-  end
+  // include all shared counters, always blocks, and tasks
+  `include "tb/utils.v"
 
   // uut instantiation
   top uut (
@@ -63,26 +60,16 @@ module inspect;
     $display("\n================ SIMULATION END STATE ================");
     $display("Final PC_IF: %h", uut.pc_if);
     $display("Final PC_EX: %h", uut.pc_ex);
-    $display("Total Cycles: %d", cycles);
     $display("------------------------------------------------------");
 
+    // use shared task to dump register state
     print_registers();
+
+    // use shared task to dump performance metrics
+    print_perf_report(cycles, instructions);
 
     $display("======================================================\n");
     $finish;
   end
-
-  // format register output in signed decimal
-  task print_registers;
-    integer i;
-    begin
-      for (i = 0; i < 32; i = i + 4) begin
-        $display("x%02d: %11d | x%02d: %11d | x%02d: %11d | x%02d: %11d", i,
-                 $signed(uut.registers.registers[i]), i + 1, $signed(uut.registers.registers[i+1]),
-                 i + 2, $signed(uut.registers.registers[i+2]), i + 3,
-                 $signed(uut.registers.registers[i+3]));
-      end
-    end
-  endtask
 
 endmodule

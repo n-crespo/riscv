@@ -21,8 +21,8 @@ module tb;
   reg RsRx;
   wire [15:0] led;
 
-  integer tests_passed = 0;
-  integer tests_failed = 0;
+  // include shared counters, always blocks, and tasks (includes utils.v)
+  `include "tb/utils.v"
 
   // instantiate the top module
   top uut (
@@ -39,12 +39,6 @@ module tb;
   initial begin
     $dumpfile("sw/.build/tb_waveform.vcd");
     $dumpvars(0, tb);
-  end
-
-  // count cycles
-  integer cycles = 0;
-  always @(posedge clk) begin
-    if (!reset) cycles <= cycles + 1;
   end
 
   initial begin
@@ -73,62 +67,48 @@ module tb;
     $display("--- SIMULATION RESULTS ---");
 
     // basic logic & memory
-    check_test(uut.registers.registers[3], 12, "math logic");
-    check_test(uut.registers.registers[4], 12, "memory logic");
-    check_test(uut.registers.registers[0], 0, "x0 hard-wired to zero");
-    check_test(uut.registers.registers[9], 32'hfffffff6, "sign extension");
-    check_test(uut.registers.registers[10], 42, "branch-not-taken");
+    assert_eq(uut.registers.registers[3], 12, "math logic");
+    assert_eq(uut.registers.registers[4], 12, "memory logic");
+    assert_eq(uut.registers.registers[0], 0, "x0 hard-wired to zero");
+    assert_eq(uut.registers.registers[9], 32'hfffffff6, "sign extension");
+    assert_eq(uut.registers.registers[10], 42, "branch-not-taken");
 
     // dependencies & safety
-    check_test(uut.registers.registers[12], 15, "RAW data dependency");
-    check_test(uut.registers.registers[13], 15, "memory throughput");
-    check_test({uut.registers.registers[14], uut.registers.registers[0]}, {32'd1, 32'd0},
-               "invalid opcode safety");
+    assert_eq(uut.registers.registers[12], 15, "raw data dependency");
+    assert_eq(uut.registers.registers[13], 15, "memory throughput");
+    assert_eq({uut.registers.registers[14], uut.registers.registers[0]}, {32'd1, 32'd0},
+              "invalid opcode safety");
 
     // accelerator & function calls
-    check_test(uut.registers.registers[18], 32'h00FFFFFF, "pixel accelerator");
-    check_test({uut.registers.registers[20], uut.registers.registers[19]}, {32'd42, 32'd99},
-               "jalr function return");
+    assert_eq(uut.registers.registers[18], 32'h00FFFFFF, "pixel accelerator");
+    assert_eq({uut.registers.registers[20], uut.registers.registers[19]}, {32'd42, 32'd99},
+              "jalr function return");
 
     // sub-word memory access
-    check_test(uut.registers.registers[27], 32'hDDCCBBAA, "sb and lw logic");
-    check_test({uut.registers.registers[28], uut.registers.registers[29]}, {
-               32'h0000BBAA, 32'hFFFFDDCC}, "lh/lhu logic");
-    check_test({uut.registers.registers[30], uut.registers.registers[31]}, {
-               32'h000000BB, 32'hFFFFFFDD}, "lb/lbu logic");
-    check_test(uut.registers.registers[24], 32'h05A5BBAA, "sh logic");
+    assert_eq(uut.registers.registers[27], 32'hDDCCBBAA, "sb and lw logic");
+    assert_eq({uut.registers.registers[28], uut.registers.registers[29]}, {
+              32'h0000BBAA, 32'hFFFFDDCC}, "lh/lhu logic");
+    assert_eq({uut.registers.registers[30], uut.registers.registers[31]}, {
+              32'h000000BB, 32'hFFFFFFDD}, "lb/lbu logic");
+    assert_eq(uut.registers.registers[24], 32'h05A5BBAA, "sh logic");
 
     // branch comparator
-    check_test(uut.registers.registers[5], 1, "bne logic");
-    check_test(uut.registers.registers[6], 1, "blt logic");
-    check_test(uut.registers.registers[7], 1, "bge logic");
+    assert_eq(uut.registers.registers[5], 1, "bne logic");
+    assert_eq(uut.registers.registers[6], 1, "blt logic");
+    assert_eq(uut.registers.registers[7], 1, "bge logic");
 
     // u-type instructions
-    check_test(uut.registers.registers[22], 32'h12345000, "lui logic");
-    // PC was 0x104 when this ran. 0x104 + 0x1000 = 0x1104
-    check_test(uut.registers.registers[23], 32'h00001104, "auipc logic");
+    assert_eq(uut.registers.registers[22], 32'h12345000, "lui logic");
+    // pc was 0x104 when this ran. 0x104 + 0x1000 = 0x1104
+    assert_eq(uut.registers.registers[23], 32'h00001104, "auipc logic");
 
     $display("--------------------------");
     $display("SUMMARY: %0d PASSED, %0d FAILED", tests_passed, tests_failed);
     $display("--------------------------");
-    $display("Total Cycles: %d", cycles);
+
+    print_perf_report(cycles, instructions);
+
     $finish;
   end
-
-  // task to automate the pass/fail boilerplate
-  task automatic check_test;
-    input [31:0] actual;
-    input [31:0] expected;
-    input [127:0] test_name;
-    begin
-      if (actual === expected) begin
-        $display("PASS: %s", test_name);
-        tests_passed = tests_passed + 1;
-      end else begin
-        $display("FAIL: %s (Actual: %h, Expected: %h)", test_name, actual, expected);
-        tests_failed = tests_failed + 1;
-      end
-    end
-  endtask
 
 endmodule
