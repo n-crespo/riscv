@@ -37,7 +37,7 @@ module tb;
 
   // generate waveform! (open with `gtkwave tb_waveform.vcd`)
   initial begin
-    $dumpfile(".build/tb_waveform.vcd");
+    $dumpfile("sw/.build/tb_waveform.vcd");
     $dumpvars(0, tb);
   end
 
@@ -46,7 +46,7 @@ module tb;
     RsRx  = 1;
     reset = 1;
 
-    $readmemh("sw/tb.hex", uut.instruction_memory.ram);  // load assembly
+    $readmemh("sw/.build/tb.hex", uut.instruction_memory.ram);  // load assembly
     #22 reset = 0;  // release reset and start CPU
 
     // wait until finished flag is 1
