@@ -55,6 +55,10 @@ run sw_file tb_file="":
     {{ iverilog }} -DSIM_HEX=\"$hex_path\" -DVCD_NAME=\"$vcd_file\" -o "$vvp_bin" {{ rtl_dir }}/*.v "$tb"
     {{ vvp }} "$vvp_bin"
 
+# compile c to assembly
+compile file:
+    {{ rv_prefix }}gcc -S -march=rv32i -mabi=ilp32 -O2 {{ sw_dir }}/{{ file }}.c -o {{ sw_dir }}/{{ file }}.s
+
 # Run the main testbench
 test:
     just run tb
