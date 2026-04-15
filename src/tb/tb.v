@@ -41,6 +41,12 @@ module tb;
     $dumpvars(0, tb);
   end
 
+  // count cycles
+  integer cycles = 0;
+  always @(posedge clk) begin
+    if (!reset) cycles <= cycles + 1;
+  end
+
   initial begin
     clk   = 0;
     RsRx  = 1;
@@ -49,11 +55,22 @@ module tb;
     $readmemh("sw/.build/tb.hex", uut.instruction_memory.ram);  // load assembly
     #22 reset = 0;  // release reset and start CPU
 
-    // wait until finished flag is 1
-    wait (uut.registers.registers[2] == 32'h1);
+    // wait for either the ebreak instruction or a timeout
+    // ebreak opcode is 32'h00100073
+    while (uut.instr_raw !== 32'h00100073 && cycles < 50000) begin
+      @(posedge clk);
+    end
+
+    // check why we exited the loop
+    if (cycles >= 50000) begin
+      $display("\n[TIMEOUT] reached 50,000 cycles without hitting ebreak.");
+    end else begin
+      // give the pipeline one extra cycle to settle after ebreak
+      @(posedge clk);
+    end
 
     // wait one final clock cycle for last write to settle
-    #10 $display("--- SIMULATION RESULTS ---");
+    $display("--- SIMULATION RESULTS ---");
 
     // basic logic & memory
     check_test(uut.registers.registers[3], 12, "math logic");
@@ -94,6 +111,7 @@ module tb;
     $display("--------------------------");
     $display("SUMMARY: %0d PASSED, %0d FAILED", tests_passed, tests_failed);
     $display("--------------------------");
+    $display("Total Cycles: %d", cycles);
     $finish;
   end
 

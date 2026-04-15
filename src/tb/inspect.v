@@ -1,12 +1,20 @@
 `timescale 1ns / 1ps
 
-// Module documentation for inspect: provides a generic simulation wrapper with signed decimal register reporting
+/**
+ * Dynamic simulation wrapper that terminates on EBREAK or a timeout
+ */
 module inspect;
 
   reg clk;
   reg reset;
   reg RsRx;
   wire [15:0] led;
+
+  // count cycles
+  integer cycles = 0;
+  always @(posedge clk) begin
+    if (!reset) cycles <= cycles + 1;
+  end
 
   // uut instantiation
   top uut (
@@ -37,14 +45,25 @@ module inspect;
     #25;
     reset = 0;
 
-    // run for a set number of cycles
-    repeat (1000) @(posedge clk);
+    // wait for either the ebreak instruction or a timeout
+    // ebreak opcode is 32'h00100073
+    while (uut.instr_raw !== 32'h00100073 && cycles < 50000) begin
+      @(posedge clk);
+    end
+
+    // check why we exited the loop
+    if (cycles >= 50000) begin
+      $display("\n[TIMEOUT] reached 50,000 cycles without hitting ebreak.");
+    end else begin
+      // give the pipeline one extra cycle to settle after ebreak
+      @(posedge clk);
+    end
 
     // print final report
     $display("\n================ SIMULATION END STATE ================");
     $display("Final PC_IF: %h", uut.pc_if);
     $display("Final PC_EX: %h", uut.pc_ex);
-    $display("Final LED:   %b", led);
+    $display("Total Cycles: %d", cycles);
     $display("------------------------------------------------------");
 
     print_registers();
@@ -53,7 +72,7 @@ module inspect;
     $finish;
   end
 
-  // format register output in decimal
+  // format register output in signed decimal
   task print_registers;
     integer i;
     begin
