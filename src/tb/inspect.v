@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-// Module documentation for inspect: provides a generic simulation wrapper that reports final architectural state with decimal registers
+// Module documentation for inspect: provides a generic simulation wrapper with signed decimal register reporting
 module inspect;
 
   reg clk;
@@ -28,7 +28,7 @@ module inspect;
     $readmemh(`SIM_HEX, uut.instruction_memory.ram);
 
     // setup waveform dumping
-    $dumpfile(".build/sim.vcd");
+    $dumpfile(`VCD_NAME);
     $dumpvars(0, inspect);
 
     // system reset sequence
@@ -59,8 +59,9 @@ module inspect;
     begin
       for (i = 0; i < 32; i = i + 4) begin
         $display("x%02d: %11d | x%02d: %11d | x%02d: %11d | x%02d: %11d", i,
-                 uut.registers.registers[i], i + 1, uut.registers.registers[i+1], i + 2,
-                 uut.registers.registers[i+2], i + 3, uut.registers.registers[i+3]);
+                 $signed(uut.registers.registers[i]), i + 1, $signed(uut.registers.registers[i+1]),
+                 i + 2, $signed(uut.registers.registers[i+2]), i + 3,
+                 $signed(uut.registers.registers[i+3]));
       end
     end
   endtask
