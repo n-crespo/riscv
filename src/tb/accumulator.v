@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 /**
- * Verification testbench for the mini_inference assembly program
+ * Verification testbench for accumulator program
  */
 module accumulator;
 
@@ -10,7 +10,13 @@ module accumulator;
   reg RsRx;
   wire [15:0] led;
 
-  // unit under test
+  // clock cycle counter
+  integer cycles = 0;
+  always @(posedge clk) begin
+    if (!reset) cycles <= cycles + 1;
+  end
+
+  // uut instantiation
   top uut (
       .clk  (clk),
       .reset(reset),
@@ -18,11 +24,7 @@ module accumulator;
       .led  (led)
   );
 
-
-  integer cycles = 0;
-  always @(posedge clk) cycles <= cycles + 1;
-
-  // generate 100mhz clock
+  // clock generation: 100mhz
   initial begin
     clk = 0;
     forever #5 clk = ~clk;
@@ -40,19 +42,26 @@ module accumulator;
     #25;
     reset = 0;
 
-    // allow enough time for the loop to finish (4 iterations)
-    repeat (200) @(posedge clk);
-
-    $display("\n================ MINI INFERENCE REPORT ================");
-    // verify result: 10 + 20 + 30 + 40 = 100
-    if (uut.registers.registers[12] == 32'd100) begin
-      $display("SUCCESS: final sum in x12 is 100");
-    end else begin
-      $display("FAILURE: expected 100, got %d", $signed(uut.registers.registers[12]));
+    // wait for ebreak (0x00100073) or timeout
+    while (uut.instr_raw !== 32'h00100073 && cycles < 1000) begin
+      @(posedge clk);
     end
-    $display("Final Pointer (x10): %d (Expected 1040)", uut.registers.registers[10]);
-    $display("======================================================\n");
-    $display("Total Cycles: %d", cycles);
+
+    // allow pipeline to settle
+    @(posedge clk);
+
+    $display("\n================ ACCUMULATOR REPORT ================");
+    // check if sum matches 10+20+30+40+50
+    if (uut.registers.registers[12] == 32'd150) begin
+      $display("SUCCESS: final sum in x12 is 150");
+    end else begin
+      $display("FAILURE: expected 150, got %d", $signed(uut.registers.registers[12]));
+    end
+
+    $display("Final Pointer (x10): %d", uut.registers.registers[10]);
+    $display("Total Cycles:       %d", cycles);
+    $display("====================================================\n");
+
     $finish;
   end
 

@@ -4,7 +4,7 @@
 # initialize pointers and constants
 .org 0x00
 addi x10, x0, 1024     # data pointer (base address 0x400)
-addi x11, x0, 4        # loop counter (4 elements)
+addi x11, x0, 5        # loop counter (4 elements)
 addi x12, x0, 0        # accumulator (sum = 0)
 
 # manually prep memory with test data
@@ -16,6 +16,8 @@ addi x5, x0, 30
 sw   x5, 8(x10)        # mem[1032] = 30
 addi x5, x0, 40
 sw   x5, 12(x10)       # mem[1036] = 40
+addi x5, x0, 50
+sw   x5, 16(x10)       # mem[1040] = 50
 
 # load value and add to accumulator
 loop:
