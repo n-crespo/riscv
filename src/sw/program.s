@@ -22,5 +22,9 @@ jal x0, loop
 end_loop:
 # 'wait' and 'end' aren't standard RV32I.
 # We'll use a custom nop or an infinite loop for now.
-ebreak # common way to signal 'stop' to a debugger/sim
-unimp  # illegal instruction often used to signal end
+
+# common way to signal 'stop' to a debugger/sim
+ebreak
+
+# illegal instruction often used to signal end
+unimp
