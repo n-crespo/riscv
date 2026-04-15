@@ -22,31 +22,36 @@ iverilog := "iverilog"
 vvp := "vvp"
 
 # --- Simulation ---
-# Run an assembly file from sw/ against a specific testbench
+# Run an assembly file from sw/, with optional testbench override
+# Usage: just run fib          → uses tb/fib.v if exists, else tb/inspect.v
 
-# Usage: just run tb fib
-run tb_file sw_file:
+# just run fib inspect  → forces tb/inspect.v
+run sw_file tb_file="":
     #!/usr/bin/env bash
     set -e
     full_path="{{ sw_dir }}/{{ sw_file }}.s"
     base_path="{{ sw_dir }}/{{ sw_file }}"
     hex_path="${base_path}.hex"
     obj_path="${base_path}.o"
+    # resolve testbench
+    if [ -n "{{ tb_file }}" ]; then
+        tb="{{ tb_dir }}/{{ tb_file }}.v"
+    elif [ -f "{{ tb_dir }}/{{ sw_file }}.v" ]; then
+        tb="{{ tb_dir }}/{{ sw_file }}.v"
+    else
+        tb="{{ tb_dir }}/inspect.v"
+    fi
     echo "[ASM] Assembling $full_path..."
     {{ as }} {{ as_flags }} "$full_path" -o "$obj_path"
     {{ objcopy }} {{ objcopy_flags }} "$obj_path" "$hex_path"
-    echo "[SIM] Running simulation with $hex_path against {{ tb_dir }}/{{ tb_file }}.v..."
+    echo "[SIM] Running $full_path against $tb..."
     mkdir -p {{ build_dir }}
-    {{ iverilog }} -DSIM_HEX=\"$hex_path\" -o {{ build_dir }}/sim.vvp {{ rtl_dir }}/*.v {{ tb_dir }}/{{ tb_file }}.v
+    {{ iverilog }} -DSIM_HEX=\"$hex_path\" -o {{ build_dir }}/sim.vvp {{ rtl_dir }}/*.v "$tb"
     {{ vvp }} {{ build_dir }}/sim.vvp
 
-# Run the main testbench with tb.s
+# Run the main testbench
 test:
-    just run tb tb
-
-# Run the fib testbench with fib.s
-test_fib:
-    just run tb_fib fib
+    just run tb
 
 # Cleanup build artifacts
 clean:
