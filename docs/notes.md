@@ -19,16 +19,14 @@ neural networks require "spatial stationary", rigid grids (image/video)
   - accelerated: swap inner MAC loop with custom VMAC MMIO calls
   - check cycle count with Verilator!
 
-- [ ] train a model on `MNIST`
-  - [ ] use ReLU for simplicity (division/exponentials are harder in RV32I)
-  - [ ] quantize with a power of 2 so i can bit shift
+- [ ] train a CNN on `MNIST`
+  - [x] designed for 28x28 MNIST
+  - [x] Conv2D: 3x3 kernel, 4-8 filters (vmac)
+  - [x] use ReLU as activation function for simplicity (division/exponentials are harder in RV32I)
+  - [x] 2x2 maxpool (minimize BRAM)
+  - [x] quantize weights with a power of 2 so i can bit shift
   - [ ] **channel count** as multiple of 4 or 8
-
-- custom tiny CNN
-  - designed for 28x28 MNIST
-  - Conv2D: 3x3 kernel, 4-8 filters (vmac)
-  - ReLU as activation function
-  - 2x2 maxpool (minimize BRAM)
+  - **pruning!**: near zero weights --> 0
   - **flatten/dense** --> 10 outputs for 0-9 digits?
 
 - benchmark
