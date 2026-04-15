@@ -14,3 +14,4 @@ loop:
 
 # Final result is in x3
 addi x0, x0, 0      # NOP for pipeline safety
+ebreak

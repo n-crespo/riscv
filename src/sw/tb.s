@@ -162,6 +162,4 @@ lui x22, 0x12345 # Result should be 0x12345000
 # PC (0x104) + 0x00001000 = 0x00001104
 auipc x23, 0x1
 
-end_sim:
-	addi x2, x0, 1 # set finished flag
-	jal  x0, end_sim # infinite loop so flag is always set
+ebreak
