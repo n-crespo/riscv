@@ -17,7 +17,7 @@ RV_PREFIX ?= riscv64-unknown-elf-
 # set default args to just open the project
 GUI_ARGS = $(BUILD_DIR)/$(PROJECT_NAME).xpr
 
-.PHONY: all project bitstream program gui clean sim test_regression test_fib
+.PHONY: all project bitstream program gui clean sim test test_fib
 
 all: project bitstream
 
@@ -39,9 +39,9 @@ $(SIM_DIR)/%.hex: $(SIM_DIR)/%.s
 # -------------------------------------------------------------------------
 
 # Alias for backward compatibility
-sim: test_regression
+sim: test
 
-test_regression: $(SIM_DIR)/tb.hex
+test: $(SIM_DIR)/tb.hex
 ifeq ($(OS),Windows_NT)
 	@echo [INFO] Compiling Regression Test with Vivado...
 	"$(VIVADO_BIN)xvlog.bat" $(SRC_DIR)/*.v $(SIM_DIR)/tb.v

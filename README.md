@@ -70,7 +70,7 @@ The project includes a robust automated testing suite managed via `Makefile`:
 
 ```bash
 # Run the full RV32I regression suite
-make test_regression
+make test
 
 # Run the Fibonacci sequence functional test
 make test_fib
