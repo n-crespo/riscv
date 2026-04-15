@@ -1,6 +1,11 @@
 # Notes
 
-Inline Assembly + C macros
+## Architecture Improvements
+
+- [ ] simpler ALU
+- [ ] more space for RAM (16kb)
+
+## Inline Assembly + C macros
 
 ```c
 #define VMAC8(rd, rs1, rs2) \
@@ -8,7 +13,7 @@ Inline Assembly + C macros
 
 ```
 
-neural networks require "spatial stationary", rigid grids (image/video)
+Neural networks require "spatial stationary", rigid grids (image/video)
 
 ## Neural Network Inference
 
