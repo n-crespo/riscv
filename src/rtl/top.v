@@ -14,7 +14,7 @@ module top (
   wire [ 7:0] rx_byte;
   reg  [31:0] instruction_reg = 32'h0;
   reg  [ 1:0] byte_count = 2'b00;
-  reg  [ 7:0] write_addr = 8'h0;
+  reg  [11:0] write_addr = 12'h0;
   wire        mem_we;
 
   // instruction fetch signals
@@ -252,9 +252,9 @@ module top (
   data_mem ram_blocks (
       .clk (clk),
       .be  (byte_en),
-      .addr(alu_result[9:2]),  // the 8-bit word index
-      .wd  (steered_wd),       // the data already shifted to the right byte lane
-      .rd  (data_rd)           // raw 32-bit word comes out
+      .addr(alu_result[13:2]),
+      .wd  (steered_wd),        // the data already shifted to the right byte lane
+      .rd  (data_rd)            // raw 32-bit word comes out
   );
 
   pixel_processor img_engine (
@@ -295,6 +295,6 @@ module top (
 
   assign mem_we = (rx_dv && byte_count == 2'b11);
   assign led[7:0] = instruction_reg[7:0];
-  assign led[15:8] = write_addr;
+  assign led[15:8] = write_addr[7:0];
 
 endmodule
