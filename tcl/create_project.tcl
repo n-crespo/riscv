@@ -10,7 +10,7 @@ create_project $project_name $build_dir -part xc7a35tcpg236-1 -force
 
 # add all verilog and constraint files
 add_files [glob -nocomplain $src_dir/*.v]
-add_files -fileset constrs_1 [glob -nocomplain constraints/*.xdc]
+add_files -fileset constrs_1 [glob -nocomplain ../constraints/*.xdc]
 if {[file exists $sim_dir]} {
     add_files -fileset sim_1 [glob $sim_dir/*.v]
 }
