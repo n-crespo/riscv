@@ -2,10 +2,10 @@
 
 top_module := "top"
 project_name := "riscv_uart_test"
-build_dir := ".build"
 rtl_dir := "rtl"
 tb_dir := "tb"
 sw_dir := "sw"
+build_dir := sw_dir + "/.build"
 tcl_dir := "../../tcl"
 
 # --- Toolchain ---
@@ -23,16 +23,20 @@ vvp := "vvp"
 
 # --- Simulation ---
 # Run an assembly file from sw/, with optional testbench override
-# Usage: just run fib          → uses tb/fib.v if exists, else tb/inspect.v
+# Usage: just run fib           → uses tb/fib.v if exists, else tb/inspect.v
+#        just run fib inspect   → forces tb/inspect.v
 
-# just run fib inspect  → forces tb/inspect.v
 run sw_file tb_file="":
     #!/usr/bin/env bash
     set -e
+    mkdir -p {{ build_dir }}
+
     full_path="{{ sw_dir }}/{{ sw_file }}.s"
-    base_path="{{ sw_dir }}/{{ sw_file }}"
-    hex_path="${base_path}.hex"
-    obj_path="${base_path}.o"
+    hex_path="{{ build_dir }}/{{ sw_file }}.hex"
+    obj_path="{{ build_dir }}/{{ sw_file }}.o"
+    vvp_bin="{{ build_dir }}/{{ sw_file }}.vvp"
+    vcd_file="{{ build_dir }}/{{ sw_file }}.vcd"
+
     # resolve testbench
     if [ -n "{{ tb_file }}" ]; then
         tb="{{ tb_dir }}/{{ tb_file }}.v"
@@ -41,13 +45,15 @@ run sw_file tb_file="":
     else
         tb="{{ tb_dir }}/inspect.v"
     fi
+
     echo "[ASM] Assembling $full_path..."
     {{ as }} {{ as_flags }} "$full_path" -o "$obj_path"
     {{ objcopy }} {{ objcopy_flags }} "$obj_path" "$hex_path"
+
     echo "[SIM] Running $full_path against $tb..."
-    mkdir -p {{ build_dir }}
-    {{ iverilog }} -DSIM_HEX=\"$hex_path\" -o {{ build_dir }}/sim.vvp {{ rtl_dir }}/*.v "$tb"
-    {{ vvp }} {{ build_dir }}/sim.vvp
+    # VCD_NAME macro indicates where dump waveform
+    {{ iverilog }} -DSIM_HEX=\"$hex_path\" -DVCD_NAME=\"$vcd_file\" -o "$vvp_bin" {{ rtl_dir }}/*.v "$tb"
+    {{ vvp }} "$vvp_bin"
 
 # Run the main testbench
 test:
@@ -55,7 +61,7 @@ test:
 
 # Cleanup build artifacts
 clean:
-    rm -rf {{ build_dir }} .Xil *.log *.jou *.pb xsim.dir
+    rm -rf {{ build_dir }} {{ build_dir }} .Xil *.log *.jou *.pb xsim.dir
     find . -type f \( -name "*.o" -o -name "*.hex" -o -name "*.vvp" -o -name "*.vcd" \) -delete
 
 # -------------------------------------------------------------------------
