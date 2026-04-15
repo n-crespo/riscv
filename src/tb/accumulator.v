@@ -43,7 +43,7 @@ module accumulator;
     @(posedge clk);
 
     $display("\n--- LOGIC VERIFICATION ---");
-    assert_eq(uut.registers.registers[12], 32'd150, "final accumulation sum");
+    assert_eq(uut.ram_blocks.ram[4], 32'd150, "final sum in memory address 16");
 
     print_perf_report(cycles, instructions);
 
