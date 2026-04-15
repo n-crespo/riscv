@@ -1,0 +1,75 @@
+# --- Project Configuration ---
+
+top_module := "top"
+project_name := "riscv_uart_test"
+build_dir := ".build"
+rtl_dir := "rtl"
+tb_dir := "tb"
+sw_dir := "sw"
+tcl_dir := "../../tcl"
+
+# --- Toolchain ---
+
+rv_prefix := "riscv64-unknown-elf-"
+as := rv_prefix + "as"
+objcopy := rv_prefix + "objcopy"
+as_flags := "-march=rv32i -mabi=ilp32"
+objcopy_flags := "-O verilog --verilog-data-width=4"
+
+# --- Simulator ---
+
+iverilog := "iverilog"
+vvp := "vvp"
+
+# --- Simulation ---
+# Run an assembly file from sw/ against a specific testbench
+
+# Usage: just run tb fib
+run tb_file sw_file:
+    #!/usr/bin/env bash
+    set -e
+    full_path="{{ sw_dir }}/{{ sw_file }}.s"
+    base_path="{{ sw_dir }}/{{ sw_file }}"
+    hex_path="${base_path}.hex"
+    obj_path="${base_path}.o"
+    echo "[ASM] Assembling $full_path..."
+    {{ as }} {{ as_flags }} "$full_path" -o "$obj_path"
+    {{ objcopy }} {{ objcopy_flags }} "$obj_path" "$hex_path"
+    echo "[SIM] Running simulation with $hex_path against {{ tb_dir }}/{{ tb_file }}.v..."
+    mkdir -p {{ build_dir }}
+    {{ iverilog }} -DSIM_HEX=\"$hex_path\" -o {{ build_dir }}/sim.vvp {{ rtl_dir }}/*.v {{ tb_dir }}/{{ tb_file }}.v
+    {{ vvp }} {{ build_dir }}/sim.vvp
+
+# Run the main testbench with tb.s
+test:
+    just run tb tb
+
+# Run the fib testbench with fib.s
+test_fib:
+    just run tb_fib fib
+
+# Cleanup build artifacts
+clean:
+    rm -rf {{ build_dir }} .Xil *.log *.jou *.pb xsim.dir
+    find . -type f \( -name "*.o" -o -name "*.hex" -o -name "*.vvp" -o -name "*.vcd" \) -delete
+
+# -------------------------------------------------------------------------
+# FPGA / Vivado Targets
+# -------------------------------------------------------------------------
+
+vivado_path := "C:/AMDDesignTools/2025.2/Vivado/bin/vivado.bat"
+
+project:
+    @echo "[INFO] Creating Vivado Project..."
+    "{{ vivado_path }}" -mode batch -notrace -source {{ tcl_dir }}/create_project.tcl -tclargs {{ project_name }} {{ top_module }} {{ build_dir }} {{ rtl_dir }}
+
+bitstream:
+    @echo "[INFO] Generating Bitstream..."
+    "{{ vivado_path }}" -mode batch -notrace -source {{ tcl_dir }}/run_bitstream.tcl -tclargs {{ project_name }} {{ build_dir }}
+
+program:
+    @echo "[INFO] Programming FPGA..."
+    "{{ vivado_path }}" -mode batch -notrace -source {{ tcl_dir }}/program.tcl -tclargs {{ project_name }} {{ top_module }} {{ build_dir }}
+
+gui:
+    "{{ vivado_path }}" -mode gui {{ build_dir }}/{{ project_name }}.xpr &
