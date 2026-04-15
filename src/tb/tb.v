@@ -46,7 +46,7 @@ module tb;
     RsRx  = 1;
     reset = 1;
 
-    $readmemh("sim/tb.hex", uut.instruction_memory.ram);  // load assembly
+    $readmemh("sw/tb.hex", uut.instruction_memory.ram);  // load assembly
     #22 reset = 0;  // release reset and start CPU
 
     // wait until finished flag is 1
