@@ -8,11 +8,9 @@ A RISC-V processor core with dynamic instruction loading and a memory-mapped pix
 
 ## Project Overview
 
-This project implements a custom 32-bit RISC-V microprocessor based on the RV32I ISA. It has been deployed onto the Basys3 FPGA and features a UART Snooper for live code deployment.
+This project implements a custom 32-bit RISC-V microprocessor based on the RV32I ISA. It has been deployed onto a Xilinx Artix-7 Basys 3 FPGA and features a UART Snooper for live code deployment.
 
 ## Architecture Diagram
-
-The processor is divided into two concurrent stages. The pipeline bridge handles control hazards through hardware flushing and ensures data synchronization between the fetch cycle and the ALU.
 
 ![Architecture Diagram](./docs/lab4.png)
 
@@ -20,13 +18,13 @@ The processor is divided into two concurrent stages. The pipeline bridge handles
 
 ### 1. Requirements
 
-- RISC-V Toolchain: `riscv64-unknown-elf-` for assembling `.s` files.
+- RISC-V Toolchain: `riscv64-unknown-elf-` for assembling `.s` files
 - Simulator: `iverilog` (recommended) or Xilinx Vivado 2025.2+.
-- `just`: for building and running
+- `just`: a fancy Makefile
 
 ### 2. Running Simulations
 
-The project includes a robust automated testing suite managed via `Makefile`:
+The testing suite can be run with `just`:
 
 ```bash
 # Run the full RV32I regression test suite
