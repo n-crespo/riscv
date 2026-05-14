@@ -14,41 +14,6 @@ This project implements a custom 32-bit RISC-V microprocessor based on the RV32I
 
 The processor is divided into two concurrent stages. The pipeline bridge handles control hazards through hardware flushing and ensures data synchronization between the fetch cycle and the ALU.
 
-```mermaid
-graph TD
-  subgraph Stage_1_Fetch
-    PC[Program Counter] --> IMEM[Sync Instr Memory]
-    IMEM --> I_RAW[instr_raw]
-  end
-
-  subgraph Pipeline_Bridge
-    I_RAW --> FLUSH{Flush Logic}
-    FLUSH -- take_jump --> I_EX[instr_ex]
-    PC -- delay --> PC_EX[pc_ex]
-  end
-
-  subgraph Stage_2_Execute
-    I_EX --> CU[Control Unit]
-    I_EX --> REG[Reg File]
-    I_EX --> IGEN[Imm Gen]
-
-    REG --> ALU[Main ALU]
-    IGEN --> ALU
-    PC_EX --> ALU
-
-    ALU --> DMEM[Data Memory]
-    ALU --> PIXEL[Pixel Accelerator]
-    ALU --> WB[Writeback Mux]
-  end
-
-  %% Feedback paths
-  ALU -- branch_decision --> PC
-  WB -- reg_wd --> REG
-
-```
-
-A simplified diagram outlining the individual components is also available.
-
 ![Architecture Diagram](./docs/lab4.png)
 
 ## Getting Started
